@@ -1,6 +1,6 @@
 <?php
 
-namespace KrisanAlfa;
+namespace KrisanAlfa\Blade;
 
 use Illuminate\Container\Container;
 use Illuminate\Events\Dispatcher;
@@ -243,14 +243,32 @@ class BonoBlade extends \Slim\View {
      */
     public function render($template, $data = array())
     {
+        $template = $this->parsePath($template);
+
+        $data = array_merge_recursive($this->all(), $data);
 
         if (! is_null($this->layout)) {
-            $this->layout->content = $this->view()->make($template, $data);
+            try {
+                $this->layout->content = $this->view()->make($template, $data);
+            } catch (Exception $e) {
+                throw $e;
+            }
+
             echo $this->layout;
             exit();
         }
 
         echo $this->view()->make($template, $data);
         exit();
+    }
+
+    protected function parsePath($path) {
+        $explodedPath = explode('/', $path);
+
+        if (count($explodedPath) > 1)
+        {
+            return 'shared.' . $explodedPath[1];
+        }
+        return $path;
     }
 }
