@@ -1,0 +1,15 @@
+{
+    "name": "krisanalfa/bono-blade",
+    "description": "Laravel Blade template engine for Bono PHP Framework",
+    "require": {
+        "illuminate/view": "~4.1.23"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Krisan Alfa Timur",
+            "email": "krisan47@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev"
+}
