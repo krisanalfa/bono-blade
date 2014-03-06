@@ -248,11 +248,7 @@ class BonoBlade extends \Slim\View {
         $data = array_merge_recursive($this->all(), $data);
 
         if (! is_null($this->layout)) {
-            try {
-                $this->layout->content = $this->view()->make($template, $data);
-            } catch (Exception $e) {
-                throw $e;
-            }
+            $this->layout->content = $this->view()->make($template, $data);
 
             echo $this->layout;
             exit();
@@ -262,13 +258,59 @@ class BonoBlade extends \Slim\View {
         exit();
     }
 
+    // FIXME how about three segment URI?
     protected function parsePath($path) {
         $explodedPath = explode('/', $path);
 
         if (count($explodedPath) > 1)
         {
+            $file = reset($this->viewPaths) . '/'.implode('/', $explodedPath).'.blade.php';
+
+            if (file_exists($file))
+            {
+                return implode('.', $explodedPath);
+            }
+
+            $try = $this->splitPath($path);
+
+            if(! is_null($try))
+            {
+                return $try;
+            }
+
             return 'shared.' . $explodedPath[1];
         }
+
         return $path;
+    }
+
+    protected function splitPath($path) {
+        $all = $this->all();
+        $entry = @$all['entry'];
+        $request = \Bono\App::getInstance()->request;
+
+        if ($entry instanceof \Norm\Model)
+        {
+            $basePath = $request->getPathInfo();
+            $id = $entry->getId();
+            $explodedBasePath = explode('/', $basePath);
+            $cleanPath = $explodedBasePath;
+
+            unset($cleanPath[0]);
+
+            $resourceUri = '/' . reset($cleanPath) . '/' . $id;
+            $explodedResourceUri = explode('/', $resourceUri);
+
+            $actionPath = array_diff($explodedBasePath, $explodedResourceUri);
+
+            $file = reset($this->viewPaths) . '/' . reset($cleanPath) . '/' . implode('/', $actionPath) . '.blade.php';
+
+            if (file_exists($file)) {
+                return reset($cleanPath) . '/' . implode('/', $actionPath);
+            }
+        }
+
+
+        return null;
     }
 }
