@@ -1,18 +1,54 @@
 <?php
 
+/**
+ * Bono - PHP5 Web Framework
+ *
+ * MIT LICENSE
+ *
+ * Copyright (c) 2013 PT Sagara Xinix Solusitama
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * @author      Krisan Alfa Timur <krisan47@gmail.com>
+ * @copyright   2013 PT Sagara Xinix Solusitama
+ * @link        http://xinix.co.id/products/bono
+ * @license     https://raw.github.com/xinix-technology/bono/master/LICENSE
+ * @package     Bono
+ *
+ */
+
 namespace KrisanAlfa\Blade;
 
+use Bono\App;
 use Illuminate\Container\Container;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\Compilers\BladeCompiler;
 use Illuminate\View\Engines\PhpEngine;
 use Illuminate\View\Engines\CompilerEngine;
 use Illuminate\View\Engines\EngineResolver;
-use Illuminate\View\Compilers\BladeCompiler;
-use Illuminate\View\FileViewFinder;
 use Illuminate\View\Environment;
+use Illuminate\View\FileViewFinder;
+use Norm\Model;
 
 class BonoBlade extends \Slim\View {
 
@@ -237,17 +273,18 @@ class BonoBlade extends \Slim\View {
      *
      * This method will output the rendered template content
      *
-     * @param   string $template The path to the Blade template, relative to the Blade templates directory.
-     * @param   array $data
+     * @param   string  $template  The path to the Blade template, relative to the Blade templates directory.
+     * @param   array   $data
+     * @param   boolean $useLayout Shall we use the layout?
      * @return  void
      */
-    public function render($template, $data = array())
+    public function render($template, $data = array(), $useLayout = true)
     {
         $template = $this->parsePath($template);
 
         $data = array_merge_recursive($this->all(), $data);
 
-        if (! is_null($this->layout)) {
+        if (! is_null($this->layout) and $useLayout) {
             $this->layout->content = $this->view()->make($template, $data);
 
             echo $this->layout;
@@ -258,38 +295,146 @@ class BonoBlade extends \Slim\View {
         exit();
     }
 
-    // FIXME how about three segment URI?
+    /**
+    * Parsing the path of file
+    *
+    * This method will try to find the existing of template file
+    *
+    * @param  string  The relative template path
+    * @return string
+    */
     protected function parsePath($path) {
         $explodedPath = explode('/', $path);
 
+        // If it's like /resource/:function
         if (count($explodedPath) > 1)
         {
-            $file = reset($this->viewPaths) . '/'.implode('/', $explodedPath).'.blade.php';
-
-            if (file_exists($file))
+            // Template priority:
+            // 1) /[templatedir]/[:resource]/[:method]
+            // 2) /[templatedir]/shared/[:method]
+            // 3) /[templatedir]/[mirrorpath]
+            foreach ($this->viewPaths as $viewPath)
             {
-                return implode('.', $explodedPath);
+
+                $template = $this->resourceTemplateIsExist($viewPath, $explodedPath);
+
+                if (! is_null($template))
+                {
+                    $path = $template;
+                    break;
+                }
+
+                $template = $this->sharedTemplateIsExist($viewPath, $explodedPath);
+
+                if (! is_null($template))
+                {
+                    $path = $template;
+                    break;
+                }
+
+                $template = $this->mirrorTemplateIsExist();
+
+                if(! is_null($template))
+                {
+                    $path = $template;
+                    break;
+                }
             }
 
-            $try = $this->splitPath($path);
-
-            if(! is_null($try))
-            {
-                return $try;
-            }
-
-            return 'shared.' . $explodedPath[1];
         }
 
         return $path;
     }
 
-    protected function splitPath($path) {
-        $all = $this->all();
-        $entry = @$all['entry'];
-        $request = \Bono\App::getInstance()->request;
+    /**
+    * The resource template is exist
+    *
+    * This method will find out if the resource template is exist
+    * For example the URL /resource/:id/:method
+    * This method will try to resolve for /templatedir/:resource/:method
+    *
+    * @param  string  The view / template path
+    * @param  array   The exploded template path
+    * @return mixed   If the resource template is exist, this method will return the template path,
+    *                 but if not, this method will return null
+    */
+    protected function resourceTemplateIsExist($viewPath, $explodedPath) {
+        $path = null;
 
-        if ($entry instanceof \Norm\Model)
+        // Extension Priority
+        // 1) *.blade.php
+        // 2) *.php
+        // 3) [noExtension]
+        $files = array(
+            $viewPath . '/' . implode('/', $explodedPath) . '.blade.php',
+            $viewPath . '/' . implode('/', $explodedPath) . '.php',
+            $viewPath . '/' . implode('/', $explodedPath)
+        );
+
+        foreach ($files as $file) {
+            if (file_exists($file))
+            {
+                $path = implode('.', $explodedPath);
+                break;
+            }
+        }
+
+        return $path;
+    }
+
+    /**
+    * The shared template is exist
+    *
+    * This method will find out if the shared template is exist
+    * For example: The URL /resource/:id/:action
+    * This method will try to resolve for /templatedir/shared/:action
+    *
+    * @param  string  The view / template path
+    * @param  array   The exploded template path
+    * @return mixed   If the shared template is exist, this method will return the template path,
+    *                 but if not, this method will return null
+    */
+    protected function sharedTemplateIsExist($viewPath, $explodedPath) {
+        $path = null;
+
+        // Extension Priority
+        // 1) *.blade.php
+        // 2) *.php
+        // 3) [noExtension]
+        $files = array(
+            $viewPath . '/shared/' . end($explodedPath) . '.blade.php',
+            $viewPath . '/shared/' . end($explodedPath) . '.php',
+            $viewPath . '/shared/' . end($explodedPath)
+        );
+
+        foreach ($files as $file) {
+            if (file_exists($file)) {
+                $path = 'shared.' . end($explodedPath);
+                break;
+            }
+        }
+
+        return $path;
+    }
+
+    /**
+    * Path spliting method based on URL
+    *
+    * This method will try to find the file based on $_SERVER['PATH_INFO']
+    * For example: /:resource/:id/foo/bar/baz will try to resolve /templatedir/:resource/foo/bar/baz
+    *
+    * @return  mixed  If the file is exsist based on $_SERVER['PATH_INFO'] in templateDirs,
+    *                 the return is string, unless it will return null
+    */
+    protected function mirrorTemplateIsExist() {
+        $retVal = null;
+        $all = $this->all();
+        $entry = isset($all['entry']) ? $all['entry'] : new \StdClass();
+        $request = App::getInstance()->request;
+
+        // Is the id of resource return the instance of Norm\Model?
+        // If yes, we should get the action to find out whether template is exist or not
+        if ($entry instanceof Model)
         {
             $basePath = $request->getPathInfo();
             $id = $entry->getId();
@@ -303,14 +448,26 @@ class BonoBlade extends \Slim\View {
 
             $actionPath = array_diff($explodedBasePath, $explodedResourceUri);
 
-            $file = reset($this->viewPaths) . '/' . reset($cleanPath) . '/' . implode('/', $actionPath) . '.blade.php';
+            // Extension Priority
+            // 1) *.blade.php
+            // 2) *.php
+            // 3) [noExtension]
+            $files = array(
+                reset($this->viewPaths) . '/' . reset($cleanPath) . '/' . implode('/', $actionPath) . '.blade.php',
+                reset($this->viewPaths) . '/' . reset($cleanPath) . '/' . implode('/', $actionPath) . '.php',
+                reset($this->viewPaths) . '/' . reset($cleanPath) . '/' . implode('/', $actionPath)
+            );
 
-            if (file_exists($file)) {
-                return reset($cleanPath) . '/' . implode('/', $actionPath);
+            // Search the file, if it does exist, break the loop
+            foreach ($files as $file) {
+                if (file_exists($file)) {
+                    $retVal = reset($cleanPath) . '/' . implode('/', $actionPath);
+                    break;
+                }
             }
+
         }
 
-
-        return null;
+        return $retVal;
     }
 }
