@@ -1,5 +1,5 @@
-#Laravel Blade Template Engine for Bono PHP Framework
----
+#BonoBlade
+Laravel Blade Template Engine for Bono PHP Framework
 
 ##How to use
 Add these lines to your configuration file
@@ -19,7 +19,7 @@ $app->get('/', function () use ($app) {
 ```
 
 ##Le' Layout
----
+
 ```html
 <!-- layoutz.blade.php -->
 <!doctype html>
@@ -49,7 +49,7 @@ $app->get('/', function () use ($app) {
 ```
 
 ##Le' Template
----
+
 ```html
 <!-- templatez.blade.php -->
 @section('content')
