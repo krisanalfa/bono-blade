@@ -92,6 +92,8 @@ class BonoBlade extends \Slim\View {
     {
         parent::__construct();
 
+        $config = App::getInstance()->config('bono.blade');
+
         $this->viewPaths = (array) $viewPaths;
 
         $this->cachePath = $cachePath;
@@ -279,23 +281,21 @@ class BonoBlade extends \Slim\View {
      */
     public function render($template, $data = array(), $useLayout = true)
     {
-        $template   = $this->parsePath($template);
+        $template   = $this->resolve($template);
         $data       = array_merge_recursive($this->all(), $data);
 
-        // If we use the layout before
-        if (! is_null($this->layout) and $useLayout)
-        {
-            $this->layout->content = $this->view()->make($template, $data);
-
-            // return '' . $this->layout;
-            echo $this->layout;
-            exit();
-        }
+        App::getInstance()->response->template($template);
 
         // Without layout
-        // return '' . $this->view()->make($template, $data);
-        echo $this->view()->make($template, $data);
-        exit();
+        if (! $useLayout)
+        {
+            return '' . $this->view()->make($template, $data);
+        }
+
+        // If we use a layout
+        $this->layout->content = $this->view()->make($template, $data);
+
+        return '' . $this->layout;
     }
 
     /**
@@ -306,7 +306,7 @@ class BonoBlade extends \Slim\View {
     * @param  string  The relative template path
     * @return string
     */
-    protected function parsePath($path)
+    protected function resolve($path)
     {
         $explodedPath = explode(DIRECTORY_SEPARATOR, $path);
 
@@ -316,7 +316,6 @@ class BonoBlade extends \Slim\View {
             // Template priority:
             // 1) /[templatedir]/[:resource]/[:method]
             // 2) /[templatedir]/shared/[:method]
-            // 3) /[templatedir]/[mirrorpath]
             foreach ($this->viewPaths as $viewPath)
             {
 
@@ -331,14 +330,6 @@ class BonoBlade extends \Slim\View {
                 // Get shared template
                 $template = $this->sharedTemplateIsExist($viewPath, $explodedPath);
                 if (! is_null($template))
-                {
-                    $path = $template;
-                    break;
-                }
-
-                // Get URL mirror template
-                $template = $this->mirrorTemplateIsExist();
-                if(! is_null($template))
                 {
                     $path = $template;
                     break;
@@ -365,24 +356,11 @@ class BonoBlade extends \Slim\View {
     {
         $path  = null;
         $glued = implode(DIRECTORY_SEPARATOR, $explodedPath);
+        $file = realpath($viewPath . DIRECTORY_SEPARATOR . $glued . '.blade.php');
 
-        // Extension Priority
-        // 1) *.blade.php
-        // 2) *.php
-        // 3) [noExtension]
-        $files = array(
-            realpath($viewPath . DIRECTORY_SEPARATOR . $glued . '.blade.php'),
-            realpath($viewPath . DIRECTORY_SEPARATOR . $glued . '.php'),
-            realpath($viewPath . DIRECTORY_SEPARATOR . $glued),
-        );
-
-        // Search the file, if it does exist, break the loop
-        foreach ($files as $file) {
-            if (is_readable($file))
-            {
-                $path = implode('.', $explodedPath);
-                break;
-            }
+        if (is_readable($file))
+        {
+            $path = implode('.', $explodedPath);
         }
 
         return $path;
@@ -404,85 +382,13 @@ class BonoBlade extends \Slim\View {
     {
         $path = null;
         $tail = end($explodedPath);
+        $file = realpath($viewPath . DIRECTORY_SEPARATOR . 'shared' . DIRECTORY_SEPARATOR . $tail . '.blade.php');
 
-        // Extension Priority
-        // 1) *.blade.php
-        // 2) *.php
-        // 3) [noExtension]
-        $files = array(
-            realpath($viewPath . DIRECTORY_SEPARATOR . 'shared' . DIRECTORY_SEPARATOR . $tail . '.blade.php'),
-            realpath($viewPath . DIRECTORY_SEPARATOR . 'shared' . DIRECTORY_SEPARATOR . $tail . '.php'),
-            realpath($viewPath . DIRECTORY_SEPARATOR . 'shared' . DIRECTORY_SEPARATOR . $tail),
-        );
-
-        // Search the file, if it does exist, break the loop
-        foreach ($files as $file)
+        if (is_readable($file))
         {
-            if (is_readable($file))
-            {
-                $path = 'shared.' . $tail;
-                break;
-            }
+            $path = 'shared.' . $tail;
         }
 
         return $path;
-    }
-
-    /**
-    * Path spliting method based on URL
-    *
-    * This method will try to find the file based on $_SERVER['PATH_INFO']
-    * For example: /:resource/:id/foo/bar/baz will try to resolve /templatedir/:resource/foo/bar/baz
-    *
-    * @return  mixed  If the file is exsist based on $_SERVER['PATH_INFO'] in templateDirs,
-    *                 the return is string, unless it will return null
-    */
-    protected function mirrorTemplateIsExist() {
-        $retVal     = null;
-        $all        = $this->all();
-        $entry      = isset($all['entry']) ? $all['entry'] : new \StdClass();
-        $request    = App::getInstance()->request;
-
-        // Is the id of resource return the instance of Norm\Model?
-        // If yes, we should get the action to find out whether template is exist or not
-        if ($entry instanceof Model)
-        {
-            $basePath           = $request->getPathInfo();
-            $id                 = $entry->getId();
-            $explodedBasePath   = explode(DIRECTORY_SEPARATOR, $basePath);
-            $cleanPath          = $explodedBasePath;
-
-            unset($cleanPath[0]);
-
-            $resourceUri = DIRECTORY_SEPARATOR . reset($cleanPath) . DIRECTORY_SEPARATOR . $id;
-            $explodedResourceUri = explode(DIRECTORY_SEPARATOR, $resourceUri);
-
-            $actionPath    = array_diff($explodedBasePath, $explodedResourceUri);
-            $headViewPath  = reset($this->viewPaths);
-            $headCleanPath = reset($cleanPath);
-            $glued         = implode(DIRECTORY_SEPARATOR, $actionPath);
-
-            // Extension Priority
-            // 1) *.blade.php
-            // 2) *.php
-            // 3) [noExtension]
-            $files = array(
-                realpath($headViewPath . DIRECTORY_SEPARATOR . $headCleanPath . DIRECTORY_SEPARATOR . $glued . '.blade.php'),
-                realpath($headViewPath . DIRECTORY_SEPARATOR . $headCleanPath . DIRECTORY_SEPARATOR . $glued . '.php'),
-                realpath($headViewPath . DIRECTORY_SEPARATOR . $headCleanPath . DIRECTORY_SEPARATOR . $glued),
-            );
-
-            // Search the file, if it does exist, break the loop
-            foreach ($files as $file)
-            {
-                if (is_readable($file))
-                {
-                    $retVal = $headCleanPath . DIRECTORY_SEPARATOR . $glued;
-                    break;
-                }
-            }
-        }
-
-        return $retVal;
     }
 }

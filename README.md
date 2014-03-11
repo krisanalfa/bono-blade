@@ -4,11 +4,15 @@ Laravel Blade Template Engine for Bono PHP Framework
 ##How to use
 Add these lines to your configuration file
 ```php
-'view'    => new \KrisanAlfa\Blade\BonoBlade(
-    array(__DIR__ . '/../templates'), // The templates directory
-    __DIR__ . '/../cache',            // The cache directory
-    'layoutz'                         // Leave the third argument empty if you won't use layouting
-)
+'bono.providers' => array(
+    '\\KrisanAlfa\\Blade\\Provider\\BladeProvider'
+),
+
+'bono.blade' => array(
+    'templates' => array('../templates'), // The template directories
+    'cache' => '../cache',                // The cache directory
+    'layout' => 'layout'                  // Leave the third argument empty if you won't use layouting
+),
 ```
 
 And call that function
