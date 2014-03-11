@@ -11,14 +11,27 @@ Add these lines to your configuration file
 'bono.blade' => array(
     'templates' => array('../templates'), // The template directories
     'cache' => '../cache',                // The cache directory
-    'layout' => 'layout'                  // Leave the third argument empty if you won't use layouting
+    'layout' => 'layout'                  // Leave this section empty if you won't use layouting, or just set it to NULL
 ),
+
+'bono.theme' => array(
+    'class' => '\\KrisanAlfa\\Blade\\Theme\\BladeTheme',
+),
+
+'bono.partial.view' => '\\KrisanAlfa\\Blade\\BonoBlade',
 ```
 
 And call that function
 ```php
-$app->get('/', function () use ($app) {
+$app->get('/', function () use ($app)
+{
     $app->view->render('templatez', array('name' => 'Krisan Alfa Timur'));
+});
+
+// Without layout
+$app->get('/', function () use ($app)
+{
+    $app->view->make('templatez', array('name' => 'Krisan Alfa Timur'));
 });
 ```
 

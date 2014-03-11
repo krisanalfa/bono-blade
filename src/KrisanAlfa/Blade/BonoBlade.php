@@ -56,13 +56,13 @@ class BonoBlade extends \Slim\View {
      * Array containg paths where to look for blade files
      * @var array
      */
-    public $viewPaths;
+    protected $viewPaths;
 
     /**
      * Location where to store cached views
      * @var string
      */
-    public $cachePath;
+    protected $cachePath;
 
     /**
      * @var Illuminate\Container\Container
@@ -88,15 +88,17 @@ class BonoBlade extends \Slim\View {
     * @param string $cachePath  The path where you want to store the view cache
     * @param string $layoutName The main layout you want to use
     */
-    function __construct($viewPaths, $cachePath, $layoutName = null)
+    function __construct($viewPaths = array(), $cachePath = '', $layoutName = null)
     {
         parent::__construct();
 
-        $config = App::getInstance()->config('bono.blade');
+        $this->app = App::getInstance();
 
-        $this->viewPaths = (array) $viewPaths;
+        $config = $this->app->config('bono.blade');
 
-        $this->cachePath = $cachePath;
+        $this->viewPaths = (array) @$config['templates'] ?: (array) $viewPaths;
+
+        $this->cachePath = @$config['cache'] ?: $cachePath;
 
         $this->container = new Container;
 
@@ -111,7 +113,7 @@ class BonoBlade extends \Slim\View {
         $this->instance = $this->registerEnvironment();
 
         // Set the layout
-        if (! is_null($layoutName))
+        if (! is_null($layoutName) and @$config['layout'])
         {
             $this->setLayout($layoutName);
         }
@@ -120,19 +122,10 @@ class BonoBlade extends \Slim\View {
     }
 
     /**
-    * Get the view instance
-    * @return void
-    */
-    public function view()
-    {
-        return $this->instance;
-    }
-
-    /**
     * Register the filesystem for Blade ecosystem
     * @return void
     */
-    public function registerFilesystem()
+    protected function registerFilesystem()
     {
         $this->container->bindShared('files', function()
         {
@@ -144,7 +137,7 @@ class BonoBlade extends \Slim\View {
     * Register the view event
     * @return void
     */
-    public function registerEvents()
+    protected function registerEvents()
     {
         $this->container->bindShared('events', function()
         {
@@ -157,7 +150,7 @@ class BonoBlade extends \Slim\View {
      *
      * @return void
      */
-    public function registerEngineResolver()
+    protected function registerEngineResolver()
     {
         $me = $this;
 
@@ -183,7 +176,7 @@ class BonoBlade extends \Slim\View {
      * @param  \Illuminate\View\Engines\EngineResolver  $resolver
      * @return void
      */
-    public function registerPhpEngine($resolver)
+    protected function registerPhpEngine($resolver)
     {
         $resolver->register('php', function()
         {
@@ -197,7 +190,7 @@ class BonoBlade extends \Slim\View {
      * @param  \Illuminate\View\Engines\EngineResolver  $resolver
      * @return void
      */
-    public function registerBladeEngine($resolver)
+    protected function registerBladeEngine($resolver)
     {
         $me = $this;
         $app = $this->container;
@@ -223,7 +216,7 @@ class BonoBlade extends \Slim\View {
      *
      * @return void
      */
-    public function registerViewFinder()
+    protected function registerViewFinder()
     {
         $me = $this;
         $this->container->bindShared('view.finder', function($app) use ($me)
@@ -239,7 +232,7 @@ class BonoBlade extends \Slim\View {
      *
      * @return Illuminate\View\Environment
      */
-    public function registerEnvironment()
+    protected function registerEnvironment()
     {
         // Next we need to grab the engine resolver instance that will be used by the
         // environment. The resolver will be used by an environment to get each of
@@ -266,7 +259,7 @@ class BonoBlade extends \Slim\View {
      */
     public function setLayout($layout)
     {
-        $this->layout = $this->view()->make($layout);
+        $this->layout = $this->make($layout);
     }
 
     /**
@@ -279,21 +272,14 @@ class BonoBlade extends \Slim\View {
      * @param   boolean $useLayout Shall we use the layout?
      * @return  void
      */
-    public function render($template, $data = array(), $useLayout = true)
+    public function render($template, $data = array())
     {
         $template   = $this->resolve($template);
         $data       = array_merge_recursive($this->all(), $data);
 
         App::getInstance()->response->template($template);
 
-        // Without layout
-        if (! $useLayout)
-        {
-            return '' . $this->view()->make($template, $data);
-        }
-
-        // If we use a layout
-        $this->layout->content = $this->view()->make($template, $data);
+        $this->layout->content = $this->make($template, $data);
 
         return '' . $this->layout;
     }
@@ -390,5 +376,10 @@ class BonoBlade extends \Slim\View {
         }
 
         return $path;
+    }
+
+    public function __call($method, $args) {
+        $view = $this->instance;
+        return call_user_func_array(array($view, $method), $args);
     }
 }
