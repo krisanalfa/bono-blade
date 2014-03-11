@@ -287,11 +287,15 @@ class BonoBlade extends \Slim\View {
         {
             $this->layout->content = $this->view()->make($template, $data);
 
-            return '' . $this->layout;
+            // return '' . $this->layout;
+            echo $this->layout;
+            exit();
         }
 
         // Without layout
-        return '' . $this->view()->make($template, $data);
+        // return '' . $this->view()->make($template, $data);
+        echo $this->view()->make($template, $data);
+        exit();
     }
 
     /**
@@ -374,7 +378,7 @@ class BonoBlade extends \Slim\View {
 
         // Search the file, if it does exist, break the loop
         foreach ($files as $file) {
-            if (file_exists($file))
+            if (is_readable($file))
             {
                 $path = implode('.', $explodedPath);
                 break;
@@ -414,7 +418,7 @@ class BonoBlade extends \Slim\View {
         // Search the file, if it does exist, break the loop
         foreach ($files as $file)
         {
-            if (file_exists($file))
+            if (is_readable($file))
             {
                 $path = 'shared.' . $tail;
                 break;
@@ -471,7 +475,7 @@ class BonoBlade extends \Slim\View {
             // Search the file, if it does exist, break the loop
             foreach ($files as $file)
             {
-                if (file_exists($file))
+                if (is_readable($file))
                 {
                     $retVal = $headCleanPath . DIRECTORY_SEPARATOR . $glued;
                     break;
