@@ -74,5 +74,8 @@ $app->get('/', function () use ($app)
 @endsection
 ```
 
+##Notes
+Make sure you have create your own cache folder
+
 ##Read More
 For more information about Blade Templating, read [this](http://laravel.com/docs/templates#blade-templating).

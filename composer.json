@@ -1,6 +1,11 @@
 {
     "name": "krisanalfa/bono-blade",
     "description": "Laravel Blade template engine for Bono PHP Framework",
+    "autoload": {
+        "psr-0": {
+            "KrisanAlfa\\Blade": "src/"
+        }
+    },
     "require": {
         "illuminate/view": "~4.1.23"
     },

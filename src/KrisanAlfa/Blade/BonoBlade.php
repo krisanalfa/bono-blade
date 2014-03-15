@@ -281,6 +281,12 @@ class BonoBlade extends \Slim\View {
 
         $this->layout->content = $this->make($template, $data);
 
+        try {
+            $this->layout->__toString();
+        } catch (\RuntimeException $e) {
+            throw $e;
+        }
+
         return '' . $this->layout;
     }
 
@@ -342,7 +348,7 @@ class BonoBlade extends \Slim\View {
     {
         $path  = null;
         $glued = implode(DIRECTORY_SEPARATOR, $explodedPath);
-        $file = realpath($viewPath . DIRECTORY_SEPARATOR . $glued . '.blade.php');
+        $file  = realpath($viewPath . DIRECTORY_SEPARATOR . $glued . '.blade.php');
 
         if (is_readable($file))
         {
@@ -378,6 +384,12 @@ class BonoBlade extends \Slim\View {
         return $path;
     }
 
+    /**
+     * Magic function to call Illuminate\View methods
+     * @param  function  $method
+     * @param  arguments $args
+     * @return mixed
+     */
     public function __call($method, $args) {
         $view = $this->instance;
         return call_user_func_array(array($view, $method), $args);
