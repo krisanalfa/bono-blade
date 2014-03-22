@@ -50,32 +50,53 @@ use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
 use Norm\Model;
 
+/**
+ * A Blade Template Engine for Bono PHP Framework
+ *
+ * @author      Krisan Alfa Timur <krisan47@gmail.com>
+ * @package     BonoBlade
+ * @subpackage  Blade
+ * @link        https://github.com/krisanalfa/bonoblade
+ */
 class BonoBlade extends \Slim\View {
 
     /**
      * Array containg paths where to look for blade files
+     *
      * @var array
      */
     protected $viewPaths;
 
     /**
      * Location where to store cached views
+     *
      * @var string
      */
     protected $cachePath;
 
     /**
+     * A slim container for Blade ecosystem
+     *
      * @var Illuminate\Container\Container
      */
     protected $container;
 
     /**
+     * Blade View instance
+     *
      * @var Illuminate\View\Environment
      */
     protected $instance;
 
     /**
+     * The layout name, usefull for share variable between layout and template
+     * @var string
+     */
+    protected $layoutName;
+
+    /**
      * The main layout
+     *
      * @var string
      */
     protected $layout = null;
@@ -123,6 +144,7 @@ class BonoBlade extends \Slim\View {
 
     /**
     * Register the filesystem for Blade ecosystem
+    *
     * @return void
     */
     protected function registerFilesystem()
@@ -135,6 +157,7 @@ class BonoBlade extends \Slim\View {
 
     /**
     * Register the view event
+    *
     * @return void
     */
     protected function registerEvents()
@@ -192,22 +215,22 @@ class BonoBlade extends \Slim\View {
      */
     protected function registerBladeEngine($resolver)
     {
-        $me = $this;
-        $app = $this->container;
+        $me        = $this;
+        $container = $this->container;
 
         // The Compiler engine requires an instance of the CompilerInterface, which in
         // this case will be the Blade compiler, so we'll first create the compiler
         // instance to pass into the engine so it can compile the views properly.
-        $this->container->bindShared('blade.compiler', function($app) use ($me)
+        $this->container->bindShared('blade.compiler', function($container) use ($me)
         {
             $cache = $me->cachePath;
 
-            return new BladeCompiler($app['files'], $cache);
+            return new BladeCompiler($container['files'], $cache);
         });
 
-        $resolver->register('blade', function() use ($app)
+        $resolver->register('blade', function() use ($container)
         {
-            return new CompilerEngine($app['blade.compiler'], $app['files']);
+            return new CompilerEngine($container['blade.compiler'], $container['files']);
         });
     }
 
@@ -239,7 +262,8 @@ class BonoBlade extends \Slim\View {
         // the various engine implementations such as plain PHP or Blade engine.
         $resolver   = $this->container['view.engine.resolver'];
         $finder     = $this->container['view.finder'];
-        $env        = new Environment($resolver, $finder, $this->container['events']);
+        $events     = $this->container['events'];
+        $env        = new Environment($resolver, $finder, $events);
 
         // We will also set the container instance on this view environment since the
         // view composers may be classes registered in the container, which allows
@@ -259,7 +283,8 @@ class BonoBlade extends \Slim\View {
      */
     public function setLayout($layout)
     {
-        $this->layout = $this->make($layout);
+        $this->layout     = $this->make($layout, $this->all());
+        $this->layoutName = $layout;
     }
 
     /**
@@ -274,17 +299,21 @@ class BonoBlade extends \Slim\View {
      */
     public function render($template, $data = array())
     {
-        $template   = $this->resolve($template);
-        $data       = array_merge_recursive($this->all(), $data);
+        $template = $this->resolve($template);
+        $data     = array_merge_recursive($this->all(), $data);
+        $app      = App::getInstance();
 
-        App::getInstance()->response->template($template);
+        $app->response->template($template);
 
-        $this->layout->content = $this->make($template, $data);
+        $this->layout = $this->make($this->layoutName, $data)->nest('content', $template, $data);
 
-        try {
+        try
+        {
             $this->layout->__toString();
-        } catch (\RuntimeException $e) {
-            throw $e;
+        }
+        catch (\RuntimeException $e)
+        {
+            $app->error($e);
         }
 
         return '' . $this->layout;
