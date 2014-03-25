@@ -11,7 +11,7 @@ Add these lines to your configuration file
 'bono.blade' => array(
     'templates' => array('../templates'), // The template directories
     'cache' => '../cache',                // The cache directory
-    'layout' => 'layout'                  // Leave this section empty if you won't use layouting, or just set it to NULL
+    'layout' => 'layout'                  // The layout name in templates dir. Leave this section empty if you won't use layouting, or just set it to NULL
 ),
 
 'bono.theme' => array(
@@ -27,12 +27,6 @@ $app->get('/', function () use ($app)
 {
     $app->view->render('templatez', array('name' => 'Krisan Alfa Timur'));
 });
-
-// Without layout
-$app->get('/', function () use ($app)
-{
-    $app->view->make('templatez', array('name' => 'Krisan Alfa Timur'));
-});
 ```
 
 ##Le' Layout
@@ -43,7 +37,7 @@ $app->get('/', function () use ($app)
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Devel</title>
+    <title>@yield('title', 'Devel')</title>
 
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -69,13 +63,29 @@ $app->get('/', function () use ($app)
 
 ```html
 <!-- templatez.blade.php -->
+@section('title')
+New Title
+@endsection
+
 @section('content')
 <h1>Hello {{ $name }}!</h1>
 @endsection
 ```
 
 ##Notes
-Make sure you have create your own cache folder
+Make sure the cache folder is exist before you use this provider.
+
+##Renderring a Page Without Layout
+
+```php
+$app = \Bono\App::getInstance();
+
+$app->get('/', function () use ($app)
+{
+    $app->response->template($templatez);
+    $app->view->make('templatez', array('name' => 'Krisan Alfa Timur'));
+});
+```
 
 ##Read More
 For more information about Blade Templating, read [this](http://laravel.com/docs/templates#blade-templating).

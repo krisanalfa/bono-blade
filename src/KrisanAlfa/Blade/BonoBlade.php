@@ -48,7 +48,6 @@ use Illuminate\View\Engines\CompilerEngine;
 use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
-use Norm\Model;
 
 /**
  * A Blade Template Engine for Bono PHP Framework
@@ -175,9 +174,9 @@ class BonoBlade extends \Slim\View {
      */
     protected function registerEngineResolver()
     {
-        $me = $this;
+        $mySelf = $this;
 
-        $this->container->bindShared('view.engine.resolver', function($app) use ($me)
+        $this->container->bindShared('view.engine.resolver', function($app) use ($mySelf)
         {
             $resolver = new EngineResolver;
 
@@ -186,7 +185,7 @@ class BonoBlade extends \Slim\View {
             // on the extension of view files. We call a method for each engines.
             foreach (array('php', 'blade') as $engine)
             {
-                $me->{'register' . ucfirst($engine) . 'Engine'}($resolver);
+                $mySelf->{'register' . ucfirst($engine) . 'Engine'}($resolver);
             }
 
             return $resolver;
@@ -241,10 +240,11 @@ class BonoBlade extends \Slim\View {
      */
     protected function registerViewFinder()
     {
-        $me = $this;
-        $this->container->bindShared('view.finder', function($app) use ($me)
+        $mySelf = $this;
+
+        $this->container->bindShared('view.finder', function($app) use ($mySelf)
         {
-            $paths = $me->viewPaths;
+            $paths = $mySelf->viewPaths;
 
             return new FileViewFinder($app['files'], $paths);
         });
@@ -421,6 +421,7 @@ class BonoBlade extends \Slim\View {
      */
     public function __call($method, $args) {
         $view = $this->instance;
+
         return call_user_func_array(array($view, $method), $args);
     }
 }
