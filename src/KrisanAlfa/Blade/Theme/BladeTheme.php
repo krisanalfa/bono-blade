@@ -26,31 +26,41 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
- * @author      Krisan Alfa Timur <krisan47@gmail.com>
- * @copyright   2013 PT Sagara Xinix Solusitama
- * @link        http://xinix.co.id/products/bono
- * @license     https://raw.github.com/xinix-technology/bono/master/LICENSE
- * @package     Bono
- *
+ * @category  View
+ * @package   Bono
+ * @author    Krisan Alfa Timur <krisan47@gmail.com>
+ * @copyright 2013 PT Sagara Xinix Solusitama
+ * @license   https://raw.github.com/xinix-technology/bono/master/LICENSE MIT
+ * @link      https://github.com/krisanalfa/bonoblade
  */
-
 namespace KrisanAlfa\Blade\Theme;
 
 use Bono\App;
 
 /**
- * A Blade Template Engine for Theme Resolver
+ * A Blade Theme for Bono Theme
  *
- * @author      Krisan Alfa Timur <krisan47@gmail.com>
- * @package     BonoBlade
- * @subpackage  Theme\Theme
- * @link        https://github.com/krisanalfa/bonoblade
+ * @category  View
+ * @package   Bono
+ * @author    Krisan Alfa Timur <krisan47@gmail.com>
+ * @copyright 2013 PT Sagara Xinix Solusitama
+ * @license   https://raw.github.com/xinix-technology/bono/master/LICENSE MIT
+ * @link      https://github.com/krisanalfa/bonoblade
  */
-class BladeTheme extends \Bono\Theme\Theme {
-
+class BladeTheme extends \Bono\Theme\Theme
+{
     protected $extension = '.blade.php';
 
-    public function partial($template, $data) {
+    /**
+     * Get a partial
+     *
+     * @param string $template Partial template string name
+     * @param mixed  $data     The data that would be passed to partial content
+     *
+     * @return KrisanAlfa\Blade\BonoBlade
+     */
+    public function partial($template, $data)
+    {
         $app      = App::getInstance();
 
         $template = $this->resolve($template, $app->view);
@@ -65,12 +75,9 @@ class BladeTheme extends \Bono\Theme\Theme {
 
         $retVal = $view->make($template, $data);
 
-        try
-        {
+        try {
             $retVal->__toString();
-        }
-        catch (\RuntimeException $e)
-        {
+        } catch (\RuntimeException $e) {
             $app->error($e);
         }
 
