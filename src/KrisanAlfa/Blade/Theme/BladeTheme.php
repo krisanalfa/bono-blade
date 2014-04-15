@@ -63,11 +63,6 @@ class BladeTheme extends \Bono\Theme\Theme
     {
         $app      = App::getInstance();
 
-        $template = $this->resolve($template, $app->view);
-        $template = str_replace($this->extension, '', $template);
-        $template = explode('/', $template);
-        $template = implode('.', $template);
-
         $Clazz    = $app->config('bono.partial.view');
         $view     = new $Clazz;
 
