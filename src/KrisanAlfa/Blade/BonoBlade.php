@@ -111,9 +111,9 @@ class BonoBlade extends \Slim\View
     {
         parent::__construct();
 
-        $this->app = App::getInstance();
+        $this->app       = App::getInstance();
 
-        $config = $this->app->config('bono.blade');
+        $config          = $this->app->config('bono.blade');
 
         $this->viewPaths = (array) @$config['templates'] ?: (array) $viewPaths;
 
@@ -132,9 +132,7 @@ class BonoBlade extends \Slim\View
         $this->instance = $this->registerEnvironment();
 
         // Set the layout
-        if (! is_null($layoutName) and @$config['layout']) {
-            $this->setLayout($layoutName);
-        }
+        $this->setLayout($layoutName);
 
         return $this;
     }
@@ -147,7 +145,8 @@ class BonoBlade extends \Slim\View
     protected function registerFilesystem()
     {
         $this->container->bindShared(
-            'files', function () {
+            'files',
+            function () {
                 return new Filesystem;
             }
         );
@@ -161,7 +160,8 @@ class BonoBlade extends \Slim\View
     protected function registerEvents()
     {
         $this->container->bindShared(
-            'events', function () {
+            'events',
+            function () {
                 return new Dispatcher;
             }
         );
@@ -177,7 +177,8 @@ class BonoBlade extends \Slim\View
         $mySelf = $this;
 
         $this->container->bindShared(
-            'view.engine.resolver', function ($app) use ($mySelf) {
+            'view.engine.resolver',
+            function ($app) use ($mySelf) {
                 $resolver = new EngineResolver;
 
                 // Next we will register the various engines with the resolver so that the
@@ -202,7 +203,8 @@ class BonoBlade extends \Slim\View
     protected function registerPhpEngine($resolver)
     {
         $resolver->register(
-            'php', function () {
+            'php',
+            function () {
                 return new PhpEngine;
             }
         );
@@ -217,22 +219,24 @@ class BonoBlade extends \Slim\View
      */
     protected function registerBladeEngine($resolver)
     {
-        $me        = $this;
+        $mySelf    = $this;
         $container = $this->container;
 
         // The Compiler engine requires an instance of the CompilerInterface, which in
         // this case will be the Blade compiler, so we'll first create the compiler
         // instance to pass into the engine so it can compile the views properly.
         $this->container->bindShared(
-            'blade.compiler', function ($container) use ($me) {
-                $cache = $me->cachePath;
+            'blade.compiler',
+            function ($container) use ($mySelf) {
+                $cache = $mySelf->cachePath;
 
                 return new BladeCompiler($container['files'], $cache);
             }
         );
 
         $resolver->register(
-            'blade', function () use ($container) {
+            'blade',
+            function () use ($container) {
                 return new CompilerEngine($container['blade.compiler'], $container['files']);
             }
         );
@@ -248,12 +252,34 @@ class BonoBlade extends \Slim\View
         $mySelf = $this;
 
         $this->container->bindShared(
-            'view.finder', function ($app) use ($mySelf) {
-                $paths = $mySelf->viewPaths;
+            'view.finder',
+            function ($app) use ($mySelf) {
+                $paths = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $mySelf->viewPaths);
+                $paths = $mySelf->arrayFlatten($paths);
+
+                foreach ($paths as $key => $path) {
+                    if (count(explode('templates', $path)) > 1) {
+                        continue;
+                    }
+                    $paths[$key] = $path . DIRECTORY_SEPARATOR . 'templates';
+                }
+
+                $mySelf->viewPaths = $paths;
 
                 return new FileViewFinder($app['files'], $paths);
             }
         );
+    }
+
+    protected function arrayFlatten($array)
+    {
+        $return = array();
+
+        array_walk_recursive($array, function ($x) use (&$return) {
+            $return[] = $x;
+        });
+
+        return $return;
     }
 
     /**
@@ -290,8 +316,9 @@ class BonoBlade extends \Slim\View
      */
     public function setLayout($layout)
     {
+        $app              = App::getInstance();
+        $layout           = $app->theme->resolve($layout);
         $this->layout     = $this->make($layout, $this->all());
-        $this->layoutName = $layout;
     }
 
     /**
@@ -306,21 +333,21 @@ class BonoBlade extends \Slim\View
      */
     public function render($template, $data = array())
     {
-        $template = $this->resolve($template);
         $data     = array_merge_recursive($this->all(), $data);
         $app      = App::getInstance();
+        $template = $this->resolve($template);
 
         $app->response->template($template);
 
-        $this->layout = $this->make($this->layoutName, $data)->nest('content', $template, $data);
+        $compiled = $this->layout->nest('content', $template, $data);
 
         try {
-            $this->layout->__toString();
+            $compiled->__toString();
         } catch (\RuntimeException $e) {
             $app->error($e);
         }
 
-        return '' . $this->layout;
+        return '' . $compiled;
     }
 
     /**
@@ -346,15 +373,13 @@ class BonoBlade extends \Slim\View
                 // Get the specific resource template
                 $template = $this->resourceTemplateIsExist($viewPath, $explodedPath);
                 if (! is_null($template)) {
-                    $path = $template;
-                    break;
+                    return $template;
                 }
 
                 // Get shared template
                 $template = $this->sharedTemplateIsExist($viewPath, $explodedPath);
                 if (! is_null($template)) {
-                    $path = $template;
-                    break;
+                    return $template;
                 }
             }
         }

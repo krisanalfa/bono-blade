@@ -35,6 +35,8 @@
  */
 namespace KrisanAlfa\Blade\Provider;
 
+use \KrisanAlfa\Blade\BonoBlade;
+
 /**
  * A Provider to replace use BonoBlade view engine instead of using \Slim\View
  *
@@ -57,8 +59,13 @@ class BladeProvider extends \Bono\Provider\Provider
         $config    = $this->app->config('bono.blade');
         $viewPath  = $config['templates'];
         $cachePath = $config['cache'];
-        $layout    = @$config['layout'];
+        $layout    = isset($config['layout']) ? $config['layout'] : 'layout';
 
-        $this->app->config('view', new \KrisanAlfa\Blade\BonoBlade($viewPath, $cachePath, $layout));
+        // If cache path is not exist and directory is writable, create new cache path
+        if (! is_dir($cachePath) and is_writable(dirname($cachePath))) {
+            mkdir($cachePath, 0755);
+        }
+
+        $this->app->config('view', new BonoBlade($viewPath, $cachePath, $layout));
     }
 }
