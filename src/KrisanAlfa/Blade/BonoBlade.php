@@ -319,6 +319,7 @@ class BonoBlade extends \Slim\View
         $app              = App::getInstance();
         $layout           = $app->theme->resolve($layout);
         $this->layout     = $this->make($layout, $this->all());
+        $this->layoutName = $layout;
     }
 
     /**
@@ -339,7 +340,7 @@ class BonoBlade extends \Slim\View
 
         $app->response->template($template);
 
-        $compiled = $this->layout->nest('content', $template, $data);
+        $compiled = $this->make($this->layoutName, $data)->nest('content', $template, $data);
 
         try {
             $compiled->__toString();
@@ -347,7 +348,7 @@ class BonoBlade extends \Slim\View
             $app->error($e);
         }
 
-        return '' . $compiled;
+        return (string) $compiled;
     }
 
     /**
