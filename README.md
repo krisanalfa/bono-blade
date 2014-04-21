@@ -48,7 +48,7 @@ And call that function
 ```php
 $app->get('/', function () use ($app)
 {
-    $app->view->render('template', array('name' => 'Krisan Alfa Timur'));
+    $app->render('template', array('name' => 'Krisan Alfa Timur'));
 });
 ```
 
@@ -131,7 +131,6 @@ $app = \Bono\App::getInstance();
 
 $app->get('/', function () use ($app)
 {
-    $app->response->template($templatez);
     $app->view->make('templatez', array('name' => 'Krisan Alfa Timur'));
 });
 ```

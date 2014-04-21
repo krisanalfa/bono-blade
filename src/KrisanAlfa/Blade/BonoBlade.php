@@ -271,15 +271,22 @@ class BonoBlade extends \Slim\View
         );
     }
 
+    /**
+     * A helper to flatten array
+     *
+     * @param  array $array  The array you want to flattened
+     *
+     * @return array         The flattened array
+     */
     protected function arrayFlatten($array)
     {
-        $return = array();
+        $flattenedArray = array();
 
-        array_walk_recursive($array, function ($x) use (&$return) {
-            $return[] = $x;
+        array_walk_recursive($array, function ($x) use (&$flattenedArray) {
+            $flattenedArray[] = $x;
         });
 
-        return $return;
+        return $flattenedArray;
     }
 
     /**
@@ -323,6 +330,31 @@ class BonoBlade extends \Slim\View
     }
 
     /**
+     * Display template
+     *
+     * This method echoes the rendered template to the current output buffer
+     *
+     * @param  string   $template   Pathname of template file relative to templates directory
+     *
+     * @return void
+     */
+    public function display($template)
+    {
+        echo $this->fetch($template);
+    }
+
+    /**
+     * Return the contents of a rendered template file
+     * @var    string $template The template pathname, relative to the template base directory
+     *
+     * @return string           The rendered template
+     */
+    public function fetch($template)
+    {
+        return $this->render($template);
+    }
+
+    /**
      * Render Blade Template
      *
      * This method will output the rendered template content
@@ -330,15 +362,17 @@ class BonoBlade extends \Slim\View
      * @param string $template The path to the Blade template, relative to the Blade templates directory.
      * @param array  $data     The data that will be passed to the view
      *
-     * @return void
+     * @return string
      */
-    public function render($template, $data = array())
+    protected function render($template, $data = array())
     {
         $data     = array_merge_recursive($this->all(), $data);
         $app      = App::getInstance();
         $template = $this->resolve($template);
 
-        $app->response->template($template);
+        if (! $template) {
+            return;
+        }
 
         $compiled = $this->make($this->layoutName, $data)->nest('content', $template, $data);
 
