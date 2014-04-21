@@ -29,10 +29,11 @@ Add these lines to your configuration file
     '\\KrisanAlfa\\Blade\\Provider\\BladeProvider'
 ),
 
+// This section is not required, but if you want customize the config, here's a base config
 'bono.blade' => array(
-    'templates' => array('../templates'), // The template directories
-    'cache' => '../cache',                // The cache directory
-    'layout' => 'myLayout'                // Default is 'layout'
+    'templates.path' => array('pathToTemplatesPath'), // Default is array('../templates')
+    'cache.path' => 'pathToCachePath',                // Default is '../cache'
+    'layout' => 'customLayoutName',                   // Default is 'layout'
 ),
 
 // Bono Themeing
@@ -122,6 +123,17 @@ New Title
     <script type="text/javascript" src="{{ URL::base('js/asset.js') }}"></script>
 </body>
 </html>
+```
+
+##Using Layout
+
+```php
+$app = \Bono\App::getInstance();
+
+$app->get('/', function () use ($app)
+{
+    $app->view->setLayout('myCustomLayout');
+});
 ```
 
 ##Renderring a Page Without Layout

@@ -63,14 +63,14 @@ class BonoBlade extends \Slim\View
      *
      * @var array
      */
-    protected $viewPaths;
+    protected $viewPaths = array();
 
     /**
      * Location where to store cached views
      *
      * @var string
      */
-    protected $cachePath;
+    protected $cachePath = '';
 
     /**
      * A slim container for Blade ecosystem
@@ -87,17 +87,11 @@ class BonoBlade extends \Slim\View
     protected $instance;
 
     /**
-     * The layout name, usefull for share variable between layout and template
-     * @var string
-     */
-    protected $layoutName;
-
-    /**
      * The main layout
      *
      * @var string
      */
-    protected $layout = null;
+    protected $layout = '';
 
     /**
     * Initalizer a.k.a the class constructor
@@ -121,6 +115,8 @@ class BonoBlade extends \Slim\View
 
         $this->container = new Container;
 
+        $this->resolvePath();
+
         $this->registerFilesystem();
 
         $this->registerEvents();
@@ -138,18 +134,35 @@ class BonoBlade extends \Slim\View
     }
 
     /**
+     * Build an array for templates path directory
+     *
+     * @return void
+     */
+    protected function resolvePath($bonoTemplatePathName = 'templates')
+    {
+        $paths = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $this->viewPaths);
+        $paths = $this->arrayFlatten($paths);
+
+        foreach ($paths as $key => $path) {
+            if (count(explode($bonoTemplatePathName, $path)) > 1) {
+                continue;
+            }
+            $paths[$key] = $path . DIRECTORY_SEPARATOR . $bonoTemplatePathName;
+        }
+
+        $this->viewPaths = $paths;
+    }
+
+    /**
     * Register the filesystem for Blade ecosystem
     *
     * @return void
     */
     protected function registerFilesystem()
     {
-        $this->container->bindShared(
-            'files',
-            function () {
-                return new Filesystem;
-            }
-        );
+        $this->container->bindShared('files', function () {
+            return new Filesystem;
+        });
     }
 
     /**
@@ -159,12 +172,9 @@ class BonoBlade extends \Slim\View
     */
     protected function registerEvents()
     {
-        $this->container->bindShared(
-            'events',
-            function () {
-                return new Dispatcher;
-            }
-        );
+        $this->container->bindShared('events', function () {
+            return new Dispatcher;
+        });
     }
 
     /**
@@ -176,21 +186,14 @@ class BonoBlade extends \Slim\View
     {
         $mySelf = $this;
 
-        $this->container->bindShared(
-            'view.engine.resolver',
-            function ($app) use ($mySelf) {
-                $resolver = new EngineResolver;
+        $this->container->bindShared('view.engine.resolver', function ($app) use ($mySelf) {
+            $resolver = new EngineResolver;
 
-                // Next we will register the various engines with the resolver so that the
-                // environment can resolve the engines it needs for various views based
-                // on the extension of view files. We call a method for each engines.
-                foreach (array('php', 'blade') as $engine) {
-                    $mySelf->{'register' . ucfirst($engine) . 'Engine'}($resolver);
-                }
+            $mySelf->registerPhpEngine($resolver);
+            $mySelf->registerBladeEngine($resolver);
 
-                return $resolver;
-            }
-        );
+            return $resolver;
+        });
     }
 
     /**
@@ -202,12 +205,9 @@ class BonoBlade extends \Slim\View
      */
     protected function registerPhpEngine($resolver)
     {
-        $resolver->register(
-            'php',
-            function () {
-                return new PhpEngine;
-            }
-        );
+        $resolver->register('php', function () {
+            return new PhpEngine;
+        });
     }
 
     /**
@@ -225,21 +225,16 @@ class BonoBlade extends \Slim\View
         // The Compiler engine requires an instance of the CompilerInterface, which in
         // this case will be the Blade compiler, so we'll first create the compiler
         // instance to pass into the engine so it can compile the views properly.
-        $this->container->bindShared(
-            'blade.compiler',
-            function ($container) use ($mySelf) {
-                $cache = $mySelf->cachePath;
+        $this->container->bindShared('blade.compiler', function ($container) use ($mySelf) {
+            $cache = $mySelf->cachePath;
 
-                return new BladeCompiler($container['files'], $cache);
-            }
-        );
+            return new BladeCompiler($container['files'], $cache);
+        });
 
-        $resolver->register(
-            'blade',
-            function () use ($container) {
-                return new CompilerEngine($container['blade.compiler'], $container['files']);
-            }
-        );
+        // Register the blade view file finder to resolve to template
+        $resolver->register('blade', function () use ($container) {
+            return new CompilerEngine($container['blade.compiler'], $container['files']);
+        });
     }
 
     /**
@@ -251,24 +246,9 @@ class BonoBlade extends \Slim\View
     {
         $mySelf = $this;
 
-        $this->container->bindShared(
-            'view.finder',
-            function ($app) use ($mySelf) {
-                $paths = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $mySelf->viewPaths);
-                $paths = $mySelf->arrayFlatten($paths);
-
-                foreach ($paths as $key => $path) {
-                    if (count(explode('templates', $path)) > 1) {
-                        continue;
-                    }
-                    $paths[$key] = $path . DIRECTORY_SEPARATOR . 'templates';
-                }
-
-                $mySelf->viewPaths = $paths;
-
-                return new FileViewFinder($app['files'], $paths);
-            }
-        );
+        $this->container->bindShared('view.finder', function ($app) use ($mySelf) {
+            return new FileViewFinder($app['files'], $mySelf->viewPaths);
+        });
     }
 
     /**
@@ -321,12 +301,11 @@ class BonoBlade extends \Slim\View
      *
      * @return void
      */
-    public function setLayout($layout)
+    public function setLayout($layout, $data = array())
     {
         $app              = App::getInstance();
         $layout           = $app->theme->resolve($layout);
-        $this->layout     = $this->make($layout, $this->all());
-        $this->layoutName = $layout;
+        $this->layout     = $this->make($layout, $data);
     }
 
     /**
@@ -364,9 +343,9 @@ class BonoBlade extends \Slim\View
      *
      * @return string
      */
-    protected function render($template, $data = array())
+    protected function render($template)
     {
-        $data     = array_merge_recursive($this->all(), $data);
+        $data     = $this->all();
         $app      = App::getInstance();
         $template = $this->resolve($template);
 
@@ -374,7 +353,7 @@ class BonoBlade extends \Slim\View
             return;
         }
 
-        $compiled = $this->make($this->layoutName, $data)->nest('content', $template, $data);
+        $compiled = $this->layout->nest('content', $template, $data);
 
         try {
             $compiled->__toString();
