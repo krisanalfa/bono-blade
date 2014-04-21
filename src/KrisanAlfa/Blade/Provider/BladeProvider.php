@@ -59,13 +59,17 @@ class BladeProvider extends \Bono\Provider\Provider
     {
         $app       = App::getInstance();
         $config    = $this->app->config('bono.blade');
-        $viewPath  = @$config['templates.path'] ?: $app->config('app.templates.path');
-        $cachePath = @$config['cache.path'] ?: '../cache';
-        $layout    = @$config['layout'] ?: 'layout';
+        $viewPath  = isset($config['templates.path']) ? $config['templates.path'] : $app->config('app.templates.path');
+        $cachePath = isset($config['cache.path']) ? $config['cache.path'] : '../cache';
+        $layout    = isset($config['layout']) ? $config['layout'] : 'layout';
 
         // If cache path is not exist and directory is writable, create new cache path
-        if (! is_dir($cachePath) and is_writable(dirname($cachePath))) {
-            mkdir($cachePath, 0755);
+        if (! is_dir($cachePath)) {
+            if (is_writable(dirname($cachePath))) {
+                mkdir($cachePath, 0755);
+            } else {
+                throw new \Exception("Cannot create folder in " . dirname($cachePath), 1);
+            }
         }
 
         $this->app->config('view', new BonoBlade($viewPath, $cachePath, $layout));
