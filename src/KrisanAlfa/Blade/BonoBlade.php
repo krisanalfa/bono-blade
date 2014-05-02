@@ -45,6 +45,7 @@ use Illuminate\View\Engines\CompilerEngine;
 use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
+use Slim\View;
 
 /**
  * A Blade Template Engine for Bono PHP Framework
@@ -56,7 +57,7 @@ use Illuminate\View\FileViewFinder;
  * @license   https://raw.github.com/xinix-technology/bono/master/LICENSE MIT
  * @link      https://github.com/krisanalfa/bonoblade
  */
-class BonoBlade extends \Slim\View
+class BonoBlade extends View
 {
     /**
      * Array containg paths where to look for blade files
