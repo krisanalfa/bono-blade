@@ -45,6 +45,7 @@ use Illuminate\View\Engines\CompilerEngine;
 use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
+use RuntimeException;
 use Slim\View;
 
 /**
@@ -101,6 +102,8 @@ class BonoBlade extends View
     * @param array  $viewPaths  The path where your template resides
     * @param string $cachePath  The path where you want to store the view cache
     * @param string $layoutName The main layout you want to use
+    *
+    * @return KrisanAlfa\Blade\BonoBlade
     */
     public function __construct($viewPaths = array(), $cachePath = '', $layoutName = null)
     {
@@ -134,6 +137,16 @@ class BonoBlade extends View
         return $this;
     }
 
+    public function getCachePath()
+    {
+        return $this->cachePath;
+    }
+
+    public function getViewPaths()
+    {
+        return $this->viewPaths;
+    }
+
     /**
      * Build an array for templates path directory
      *
@@ -141,13 +154,13 @@ class BonoBlade extends View
      */
     protected function resolvePath($bonoTemplatePathName = 'templates')
     {
-        $paths = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $this->viewPaths);
-        $paths = $this->arrayFlatten($paths);
+        $paths        = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $this->viewPaths);
+        $paths        = $this->arrayFlatten($paths);
+        $explodedPath = explode($bonoTemplatePathName, $path);
 
         foreach ($paths as $key => $path) {
-            if (count(explode($bonoTemplatePathName, $path)) > 1) {
-                continue;
-            }
+            if (count($explodedPath) > 1) continue;
+
             $paths[$key] = $path . DIRECTORY_SEPARATOR . $bonoTemplatePathName;
         }
 
@@ -227,7 +240,7 @@ class BonoBlade extends View
         // this case will be the Blade compiler, so we'll first create the compiler
         // instance to pass into the engine so it can compile the views properly.
         $this->container->bindShared('blade.compiler', function ($container) use ($mySelf) {
-            $cache = $mySelf->cachePath;
+            $cache = $mySelf->getCachePath();
 
             return new BladeCompiler($container['files'], $cache);
         });
@@ -248,7 +261,7 @@ class BonoBlade extends View
         $mySelf = $this;
 
         $this->container->bindShared('view.finder', function ($app) use ($mySelf) {
-            return new FileViewFinder($app['files'], $mySelf->viewPaths);
+            return new FileViewFinder($app['files'], $mySelf->getViewPaths());
         });
     }
 
@@ -350,19 +363,15 @@ class BonoBlade extends View
         $app      = App::getInstance();
         $template = $this->resolve($template);
 
-        if (! $template) {
-            return;
-        }
+        if (! $template) return;
 
         $compiled = $this->layout->nest('content', $template, $data);
 
         try {
-            $compiled->__toString();
+            return (string) $compiled;
         } catch (\RuntimeException $e) {
             $app->error($e);
         }
-
-        return (string) $compiled;
     }
 
     /**
@@ -387,15 +396,11 @@ class BonoBlade extends View
 
                 // Get the specific resource template
                 $template = $this->resourceTemplateIsExist($viewPath, $explodedPath);
-                if (! is_null($template)) {
-                    return $template;
-                }
+                if (! is_null($template)) return $template;
 
                 // Get shared template
                 $template = $this->sharedTemplateIsExist($viewPath, $explodedPath);
-                if (! is_null($template)) {
-                    return $template;
-                }
+                if (! is_null($template)) return $template;
             }
         }
 
@@ -421,9 +426,7 @@ class BonoBlade extends View
         $glued = implode(DIRECTORY_SEPARATOR, $explodedPath);
         $file  = realpath($viewPath . DIRECTORY_SEPARATOR . $glued . '.blade.php');
 
-        if (is_readable($file)) {
-            $path = implode('.', $explodedPath);
-        }
+        if (is_readable($file)) $path = implode('.', $explodedPath);
 
         return $path;
     }
@@ -447,9 +450,7 @@ class BonoBlade extends View
         $tail = end($explodedPath);
         $file = realpath($viewPath . DIRECTORY_SEPARATOR . 'shared' . DIRECTORY_SEPARATOR . $tail . '.blade.php');
 
-        if (is_readable($file)) {
-            $path = 'shared.' . $tail;
-        }
+        if (is_readable($file)) $path = 'shared.' . $tail;
 
         return $path;
     }

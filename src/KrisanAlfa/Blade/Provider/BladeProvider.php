@@ -35,8 +35,10 @@
  */
 namespace KrisanAlfa\Blade\Provider;
 
-use \KrisanAlfa\Blade\BonoBlade;
-use \Bono\App;
+use KrisanAlfa\Blade\BonoBlade;
+use Bono\App;
+use Exception;
+use Bono\Provider\Provider;
 
 /**
  * A Provider to replace use BonoBlade view engine instead of using \Slim\View
@@ -48,7 +50,7 @@ use \Bono\App;
  * @license   https://raw.github.com/xinix-technology/bono/master/LICENSE MIT
  * @link      https://github.com/krisanalfa/bonoblade
  */
-class BladeProvider extends \Bono\Provider\Provider
+class BladeProvider extends Provider
 {
     /**
      * Initialize the provider
@@ -68,7 +70,7 @@ class BladeProvider extends \Bono\Provider\Provider
             if (is_writable(dirname($cachePath))) {
                 mkdir($cachePath, 0755);
             } else {
-                throw new \Exception("Cannot create folder in " . dirname($cachePath), 1);
+                $app->error(new Exception("Cannot create folder in " . dirname($cachePath), 1));
             }
         }
 
