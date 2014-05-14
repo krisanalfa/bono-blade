@@ -367,10 +367,12 @@ class BonoBlade extends View
         $compiled = $this->layout->nest('content', $template, $data);
 
         try {
-            return (string) $compiled;
+            $compiled->__toString();
         } catch (\RuntimeException $e) {
             $app->error($e);
         }
+
+        return (string) $compiled;
     }
 
     /**
