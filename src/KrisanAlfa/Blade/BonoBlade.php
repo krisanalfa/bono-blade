@@ -156,10 +156,9 @@ class BonoBlade extends View
     {
         $paths        = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $this->viewPaths);
         $paths        = $this->arrayFlatten($paths);
-        $explodedPath = explode($bonoTemplatePathName, $path);
 
         foreach ($paths as $key => $path) {
-            if (count($explodedPath) > 1) continue;
+            if (count(explode($bonoTemplatePathName, $path)) > 1) continue;
 
             $paths[$key] = $path . DIRECTORY_SEPARATOR . $bonoTemplatePathName;
         }
