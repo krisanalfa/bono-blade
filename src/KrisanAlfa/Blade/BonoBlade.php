@@ -137,11 +137,21 @@ class BonoBlade extends View
         return $this;
     }
 
+    /**
+     * Get protected attributes of cachePath
+     *
+     * @return string
+     */
     public function getCachePath()
     {
         return $this->cachePath;
     }
 
+    /**
+     * Get protected attributes of viewPaths
+     *
+     * @return array
+     */
     public function getViewPaths()
     {
         return $this->viewPaths;
@@ -188,6 +198,24 @@ class BonoBlade extends View
         $this->container->bindShared('events', function () {
             return new Dispatcher;
         });
+    }
+
+    /**
+     * A helper to flatten array
+     *
+     * @param  array $array  The array you want to flattened
+     *
+     * @return array         The flattened array
+     */
+    protected function arrayFlatten($array)
+    {
+        $flattenedArray = array();
+
+        array_walk_recursive($array, function ($x) use (&$flattenedArray) {
+            $flattenedArray[] = $x;
+        });
+
+        return $flattenedArray;
     }
 
     /**
@@ -265,24 +293,6 @@ class BonoBlade extends View
     }
 
     /**
-     * A helper to flatten array
-     *
-     * @param  array $array  The array you want to flattened
-     *
-     * @return array         The flattened array
-     */
-    protected function arrayFlatten($array)
-    {
-        $flattenedArray = array();
-
-        array_walk_recursive($array, function ($x) use (&$flattenedArray) {
-            $flattenedArray[] = $x;
-        });
-
-        return $flattenedArray;
-    }
-
-    /**
      * Register the view environment.
      *
      * @return Illuminate\View\Environment
@@ -322,8 +332,6 @@ class BonoBlade extends View
     }
 
     /**
-     * Display template
-     *
      * This method echoes the rendered template to the current output buffer
      *
      * @param  string   $template   Pathname of template file relative to templates directory
@@ -337,6 +345,7 @@ class BonoBlade extends View
 
     /**
      * Return the contents of a rendered template file
+     *
      * @var    string $template The template pathname, relative to the template base directory
      *
      * @return string           The rendered template
@@ -347,8 +356,6 @@ class BonoBlade extends View
     }
 
     /**
-     * Render Blade Template
-     *
      * This method will output the rendered template content
      *
      * @param string $template The path to the Blade template, relative to the Blade templates directory.
@@ -376,8 +383,6 @@ class BonoBlade extends View
     }
 
     /**
-    * Parsing the path of file
-    *
     * This method will try to find the existing of template file
     *
     * @param string $path The relative template path
@@ -409,8 +414,6 @@ class BonoBlade extends View
     }
 
     /**
-    * The resource template is exist
-    *
     * This method will find out if the resource template is exist
     * For example the URL /resource/:id/:method
     * This method will try to resolve for /templatedir/:resource/:method
@@ -433,8 +436,6 @@ class BonoBlade extends View
     }
 
     /**
-    * The shared template is exist
-    *
     * This method will find out if the shared template is exist
     * For example: The URL /resource/:id/:action
     * This method will try to resolve for /templatedir/shared/:action
