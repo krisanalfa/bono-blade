@@ -129,13 +129,13 @@ class BonoBlade extends View
      */
     protected function resolvePath($bonoTemplatePathName = 'templates')
     {
-        $paths        = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $this->viewPaths);
-        $paths        = $this->arrayFlatten($paths);
+        $paths = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $this->viewPaths);
+        $paths = $this->arrayFlatten($paths);
 
         foreach ($paths as $key => $path) {
-            if (count(explode($bonoTemplatePathName, $path)) > 1) continue;
-
-            $paths[$key] = $path . DIRECTORY_SEPARATOR . $bonoTemplatePathName;
+            if (count(explode($bonoTemplatePathName, $path)) == 1) {
+                $paths[$key] = $path . DIRECTORY_SEPARATOR . $bonoTemplatePathName;
+            }
         }
 
         $this->viewPaths = $paths;
@@ -168,9 +168,9 @@ class BonoBlade extends View
     /**
      * A helper to flatten array
      *
-     * @param  array $array  The array you want to flattened
+     * @param array $array The array you want to flattened
      *
-     * @return array         The flattened array
+     * @return array The flattened array
      */
     protected function arrayFlatten($array)
     {
@@ -232,9 +232,9 @@ class BonoBlade extends View
         // this case will be the Blade compiler, so we'll first create the compiler
         // instance to pass into the engine so it can compile the views properly.
         $this->container->bindShared('blade.compiler', function ($container) use ($mySelf) {
-            $cache = $mySelf->getCachePath();
+            $cachePath = $mySelf->getCachePath();
 
-            return new BladeCompiler($container['files'], $cache);
+            return new BladeCompiler($container['files'], $cachePath);
         });
 
         // Register the blade view file finder to resolve to template
@@ -267,10 +267,10 @@ class BonoBlade extends View
         // Next we need to grab the engine resolver instance that will be used by the
         // environment. The resolver will be used by an environment to get each of
         // the various engine implementations such as plain PHP or Blade engine.
-        $resolver   = $this->container['view.engine.resolver'];
-        $finder     = $this->container['view.finder'];
-        $events     = $this->container['events'];
-        $env        = new Environment($resolver, $finder, $events);
+        $resolver = $this->container['view.engine.resolver'];
+        $finder   = $this->container['view.finder'];
+        $events   = $this->container['events'];
+        $env      = new Environment($resolver, $finder, $events);
 
         // We will also set the container instance on this view environment since the
         // view composers may be classes registered in the container, which allows
@@ -291,15 +291,15 @@ class BonoBlade extends View
      */
     public function setLayout($layout, array $data = array())
     {
-        $app              = App::getInstance();
-        $layout           = $app->theme->resolve($layout);
-        $this->layout     = $this->make($layout, $data);
+        $app          = App::getInstance();
+        $layout       = $app->theme->resolve($layout);
+        $this->layout = $this->make($layout, $data);
     }
 
     /**
      * This method echoes the rendered template to the current output buffer
      *
-     * @param  string   $template   Pathname of template file relative to templates directory
+     * @param string $template Pathname of template file relative to templates directory
      *
      * @return void
      */
@@ -311,9 +311,9 @@ class BonoBlade extends View
     /**
      * Return the contents of a rendered template file
      *
-     * @var    string $template The template pathname, relative to the template base directory
+     * @var string $template The template pathname, relative to the template base directory
      *
-     * @return string           The rendered template
+     * @return string The rendered template
      */
     public function fetch($template)
     {
@@ -324,27 +324,25 @@ class BonoBlade extends View
      * This method will output the rendered template content
      *
      * @param string $template The path to the Blade template, relative to the Blade templates directory.
-     * @param array  $data     The data that will be passed to the view
      *
      * @return string
      */
     protected function render($template)
     {
         $data     = $this->all();
-        $app      = App::getInstance();
         $template = $this->resolve($template);
 
-        if (! $template) return;
+        if ($template) {
+            $compiled = $this->layout->nest('content', $template, $data);
 
-        $compiled = $this->layout->nest('content', $template, $data);
+            try {
+                $compiled->__toString();
+            } catch (RuntimeException $e) {
+                App::getInstance()->error($e);
+            }
 
-        try {
-            $compiled->__toString();
-        } catch (RuntimeException $e) {
-            $app->error($e);
+            return (string) $compiled;
         }
-
-        return (string) $compiled;
     }
 
     /**
@@ -354,7 +352,7 @@ class BonoBlade extends View
     *
     * @return string
     */
-    protected function resolve($path)
+    public function resolve($path)
     {
         $explodedPath = explode(DIRECTORY_SEPARATOR, $path);
 
@@ -391,13 +389,12 @@ class BonoBlade extends View
     */
     protected function resourceTemplateIsExist($viewPath, $explodedPath)
     {
-        $path  = null;
         $glued = implode(DIRECTORY_SEPARATOR, $explodedPath);
         $file  = realpath($viewPath . DIRECTORY_SEPARATOR . $glued . '.blade.php');
 
-        if (is_readable($file)) $path = implode('.', $explodedPath);
-
-        return $path;
+        if (is_readable($file)) {
+            return implode('.', $explodedPath);
+        }
     }
 
     /**
@@ -413,13 +410,12 @@ class BonoBlade extends View
     */
     protected function sharedTemplateIsExist($viewPath, $explodedPath)
     {
-        $path = null;
         $tail = end($explodedPath);
         $file = realpath($viewPath . DIRECTORY_SEPARATOR . 'shared' . DIRECTORY_SEPARATOR . $tail . '.blade.php');
 
-        if (is_readable($file)) $path = 'shared.' . $tail;
-
-        return $path;
+        if (is_readable($file)) {
+            return 'shared.' . $tail;
+        }
     }
 
     /**
@@ -434,6 +430,10 @@ class BonoBlade extends View
     {
         $view = $this->instance;
 
-        return call_user_func_array(array($view, $method), $args);
+        try {
+            return call_user_func_array(array($view, $method), $args);
+        } catch (RuntimeException $e) {
+            App::getInstance()->error($e);
+        }
     }
 }

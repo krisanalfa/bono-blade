@@ -18,32 +18,97 @@ use Bono\Provider\Provider;
 class BladeProvider extends Provider
 {
     /**
+     * Bono Application instance
+     */
+    protected $app = null;
+
+    /**
+     * Configuration
+     */
+    protected $config = array();
+    /**
      * Initialize the provider
      *
      * @return void
      */
     public function initialize()
     {
-        $app       = App::getInstance();
-        $config    = $app->config('bono.blade');
-        $viewPath  = isset($config['templates.path']) ? $config['templates.path'] : $app->config('app.templates.path');
-        $cachePath = isset($config['cache.path']) ? $config['cache.path'] : '../cache';
-        $layout    = isset($config['layout']) ? $config['layout'] : 'layout';
+        $app    = $this->app    = App::getInstance();
+        $config = $this->config = $app->config('bono.blade');
 
-        $this->makeCachePath($cachePath);
+        $this->setViewPaths();
+        $this->setCachePath();
+        $this->setLayout();
 
-        $app->config('view', new BonoBlade($viewPath, $cachePath, $layout));
+        $app->config('view', new BonoBlade($this->viewPaths, $this->cachePath, $this->layout));
     }
 
-    protected function makeCachePath($cachePath)
+    /**
+     * Create our cachePath for Blade Compiler
+     *
+     * @throw Exception When we cannot create cache path, and the cache path doesn't exist
+     *
+     * @return void
+     */
+    protected function makeCachePath()
     {
         // If cache path is not exist and directory is writable, create new cache path
-        if (! is_dir($cachePath)) {
-            if (is_writable(dirname($cachePath))) {
-                mkdir($cachePath, 0755);
+        if (! is_dir($this->cachePath)) {
+            if (is_writable(dirname($this->cachePath))) {
+                mkdir($this->cachePath, 0755);
             } else {
-                App::getInstance()->error(new Exception("Cannot create folder in " . dirname($cachePath), 1));
+                $this->app->error(new Exception("Cannot create folder in " . dirname($this->cachePath), 1));
             }
+        }
+    }
+
+    /**
+     * Set view paths, where template and other view component resides
+     *
+     * @return void
+     */
+    protected function setViewPaths()
+    {
+        $this->viewPaths = null;
+
+        if (isset($this->config['templates.path'])) {
+            $this->viewPaths = $this->config['templates.path'];
+        } else {
+            $this->viewPaths = $this->app->config('app.templates.path');
+        }
+    }
+
+    /**
+     * Set and create our cache path for optimizing blade compiling
+     *
+     * @return void
+     */
+    protected function setCachePath()
+    {
+        $this->cachePath = null;
+
+        if (isset($this->config['cache.path'])) {
+            $this->cachePath = $config['cache.path'];
+        } else {
+            $this->cachePath = '../cache';
+        }
+
+        $this->makeCachePath();
+    }
+
+    /**
+     * Set our basic layout
+     *
+     * @return void
+     */
+    protected function setLayout()
+    {
+        $this->layout = null;
+
+        if (isset($this->config['layout'])) {
+            $this->layout = $this->config['layout'];
+        } else {
+            $this->layout = 'layout';
         }
     }
 }
