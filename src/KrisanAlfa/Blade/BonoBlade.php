@@ -10,7 +10,7 @@ use Illuminate\View\Engines\CompilerEngine;
 use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
-use RuntimeException;
+use ErrorException;
 use Slim\View;
 
 /**
@@ -333,15 +333,11 @@ class BonoBlade extends View
         $template = $this->resolve($template);
 
         if ($template) {
-            $compiled = $this->layout->nest('content', $template, $data);
-
             try {
-                $compiled->__toString();
-            } catch (RuntimeException $e) {
+                return $this->layout->nest('content', $template, $data)->render();
+            } catch (ErrorException $e) {
                 App::getInstance()->error($e);
             }
-
-            return (string) $compiled;
         }
     }
 
