@@ -12,6 +12,7 @@ use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
 use ErrorException;
 use Slim\View;
+use Closure;
 
 /**
  * A Blade Template Engine for Bono PHP Framework
@@ -278,6 +279,28 @@ class BonoBlade extends View
         $env->setContainer($this->container);
 
         return $env;
+    }
+
+    /**
+     * Extend the compiler
+     *
+     * @param Closure $function callback to the Blade::extend()
+     *
+     * @return void
+     */
+    public function extend(Closure $function)
+    {
+        return $this->container['blade.compiler']->extend($function);
+    }
+
+    /**
+     * Get the compiler
+     *
+     * @return BladeCompiler
+     */
+    public function getCompiler()
+    {
+        return $this->container['blade.compiler'];
     }
 
     /**
