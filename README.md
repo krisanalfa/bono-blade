@@ -1,20 +1,10 @@
 #BonoBlade
 Laravel Blade Template Engine for Bono PHP Framework
 
-**note: BonoBlade also use Blade templating for `partial` view**
+> **Note:** BonoBlade also use Blade templating for `partial` view
 
 ##Install
 Add this line to your `composer.json` file
-
-For `0.1.10` Bono use
-
-```
-"require": {
-    "krisanalfa/bono-blade": "~0.1.0"
-},
-```
-
-For `dev-master` Bono use. Bono is fast developed, you must use upstream version.
 
 ```
 "require": {
@@ -38,7 +28,7 @@ Add these lines to your configuration file
 
 // Bono Themeing
 'bono.theme' => array(
-    'class' => '\\KrisanAlfa\\Theme\\BladeTheme',
+    'class' => '\\KrisanAlfa\\Theme\\BladeTheme', // You can use another theme that extends from bono
 ),
 
 // Bono Partial (segment of template)
@@ -271,7 +261,7 @@ $app->view->extend(function($view, $compiler) {
 });
 ```
 
-Now you can use `{{ @dateTime($dateValue) }}` to get your datetime value.
+Now you can use `@dateTime($dateValue)` to get your datetime value.
 
 The `createPlainMatcher` method is used for directives with no arguments like `@endif` and `@stop`, while `createMatcher` is used for directives with arguments.
 
