@@ -294,6 +294,19 @@ class BonoBlade extends View
     }
 
     /**
+     * Sets the content tags used for the compiler.
+     *
+     * @param  string  $openTag
+     * @param  string  $closeTag
+     * @param  bool    $escaped
+     * @return void
+     */
+    public function setContentTags($openTag, $closeTag, $escaped = false)
+    {
+        return $this->container['blade.compiler']->setContentTags($openTag, $closeTag, $escaped);
+    }
+
+    /**
      * Get the compiler
      *
      * @return BladeCompiler

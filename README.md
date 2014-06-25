@@ -8,7 +8,7 @@ Add this line to your `composer.json` file
 
 ```
 "require": {
-    "krisanalfa/bono-blade": "*"
+    "krisanalfa/bono-blade": "~0.6.*"
 },
 ```
 
@@ -35,10 +35,17 @@ Add these lines to your configuration file
 'bono.partial.view' => '\\KrisanAlfa\\Blade\\BonoBlade',
 ```
 
-And call that function
+You may use any other theme based on `BladeTheme`, such as [blade foundation](https://github.com/krisanalfa/blade-foundation).
+Or you can create your own theme.
+
+To render your
 ```php
+use Bono\App;
+
+$app = App::getInstance();
+
 $app->get('/', function () use ($app) {
-    $app->render('template', array('name' => 'Krisan Alfa Timur'));
+    $app->render('yourTemplateName', array('var' => 'value'));
 });
 ```
 
@@ -51,23 +58,12 @@ $app->get('/', function () use ($app) {
 <head>
     <meta charset="UTF-8">
     <title>@yield('title', 'Devel')</title>
-
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-
-    <link type="image/x-icon" href="{{ URL::base('favicon.ico') }}" rel="Shortcut icon" />
-
-    <link rel="stylesheet" href="{{ URL::base('css/style.css') }}">
 </head>
 
 <body>
-    <div style="padding-top: 60px; margin: 0 5px;">
+    <div>
         @yield('content')
     </div>
-
-    <script type="text/javascript" src="{{ URL::base('js/jquery.js') }}"></script>
-    <script type="text/javascript" src="{{ URL::base('js/asset.js') }}"></script>
 </body>
 </html>
 ```
@@ -75,7 +71,7 @@ $app->get('/', function () use ($app) {
 ##Le' Template
 
 ```html
-<!-- template.blade.php -->
+<!-- myTemplate.blade.php -->
 @section('title')
 New Title
 @endsection
@@ -85,6 +81,20 @@ New Title
 @endsection
 ```
 
+##Renderring Template
+
+Simply, you can render your template by call `render` function in `\Bono\App` instance.
+```php
+use Bono\App;
+
+$app = App::getInstance();
+
+$app->get('/', function () use ($app) {
+    $app->view->setLayout('myLayout'); // be sure you're not adding '.blade.php' or your template will not found
+    $app->render('myTemplate', array('name' => 'Krisan Alfa Timur'));
+});
+```
+
 ##Le' Result
 
 ```html
@@ -92,39 +102,15 @@ New Title
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Devel</title>
-
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-
-    <link type="image/x-icon" href="{{ URL::base('favicon.ico') }}" rel="Shortcut icon" />
-
-    <link rel="stylesheet" href="{{ URL::base('css/style.css') }}">
+    <title>New Title</title>
 </head>
 
 <body>
-    <div style="padding-top: 60px; margin: 0 5px;">
+    <div>
         <h1>Hello, Krisan Alfa Timur!</h1>
     </div>
-
-    <script type="text/javascript" src="{{ URL::base('js/jquery.js') }}"></script>
-    <script type="text/javascript" src="{{ URL::base('js/asset.js') }}"></script>
 </body>
 </html>
-```
-
-##Using Layout
-
-```php
-
-use Bono\App;
-
-$app = App::getInstance();
-
-$app->get('/', function () use ($app) {
-    $app->view->setLayout('myCustomLayout');
-});
 ```
 
 ##Renderring a Page Without Layout
@@ -135,9 +121,146 @@ use Bono\App;
 $app = App::getInstance();
 
 $app->get('/', function () use ($app) {
-    $app->view->make('templatez', array('name' => 'Krisan Alfa Timur'));
+    // This method is same with $app->view->partial($template, $data)
+    $app->view->make('myTemplateWithoutLayout', array('name' => 'Krisan Alfa Timur'));
 });
 ```
+
+## Working with sections
+
+```html
+<!-- Layout, filename: myCustomLayout -->
+<html>
+    <body>
+        @section('sidebar')
+            This is the master sidebar.
+        @show
+
+        <div class="container">
+            @yield('content')
+        </div>
+    </body>
+</html>
+```
+
+```html
+<!-- Template -->
+@extends('myCustomLayout')
+
+@section('sidebar')
+    @parent
+
+    <p>This is appended to the master sidebar.</p>
+@stop
+
+@section('content')
+    <p>This is my body content. Appended to the container.</p>
+@stop
+```
+
+Note that views which `extend` a Blade layout simply override sections from the layout. Content of the layout can be included in a child view using the `@parent` directive in a section, allowing you to append to the contents of a layout section such as a sidebar or footer.
+
+Sometimes, such as when you are not sure if a section has been defined, you may wish to pass a default value to the `@yield` directive. You may pass the default value as the second argument:
+
+## Including Sub-Views
+
+```html
+@include('view.name')
+```
+
+You may also pass an array of data to the included view:
+
+```html
+@include('view.name', array('some'=>'data'))
+```
+
+## Overwriting Sections
+
+By default, sections are appended to any previous content that exists in the section. To overwrite a section entirely, you may use the `overwrite` statement:
+
+```html
+@section('test')
+   one
+@stop
+@section('test')
+   two
+@stop
+@yield('test')
+```
+The outpur is:
+
+```html
+one
+```
+
+But if you change the second `@stop` to an `@overwrite`.
+
+
+```html
+@section('test')
+   one
+@stop
+@section('test')
+   two
+@overwrite
+@yield('test')
+```
+
+Then the following is output.
+
+```html
+two
+```
+
+- `@overwrite` - End a section.
+- `@stop` - Stopping Injecting Content Into a Section.
+- `@show` - Yielding the Current Section in a Blade Template.
+- `@append` - Stopping Injecting Content into a Section and Appending It.
+
+## Extends Template To Be Reuseable
+
+```html
+<!-- listTemplate -->
+@section('header')
+My sexy header
+@endsection
+
+<div class="container">
+    @section('body')
+        {{-- some other controll structure to make your page happens --}}
+    @endsection
+
+    @section('action')
+        <div class="action">
+            <button>Edit</button>
+            <button>Update</button>
+        </div>
+    @endsection
+</div>
+
+@section('footer')
+My shiny footer
+@endsection
+```
+
+```html
+<!-- Another template that extends listTemplate -->
+
+@extends('listTemplate')
+
+@section('body')
+    {{-- some other controll structure to make your page happens --}}
+    {{-- some kind that make this page unique --}}
+
+    <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Rerum eligendi, totam velit earum assumenda optio accusantium magni est maiores ad inventore expedita nisi minus autem, porro adipisci cupiditate in iure!</p>
+
+    <div class="blue">
+        Some bluish content
+    </div>
+@overwrite
+```
+
+Based on this case, your `body` section will be overriden by `lorem ipsum` and `bluish content`.
 
 ## Other Blade Control Structures
 
@@ -283,7 +406,47 @@ $app->view->extend(function($view, $compiler) {
 });
 ```
 
-Now you can use `@pre` and `@endpre` whenever you want to `print_r()` your value.
+Now you can use `@pre` and `@endpre` whenever you want to `print_r()` your value. Just like this:
 
-##Read More
-For more information about Blade Templating, read [this](http://laravel.com/docs/templates#blade-templating).
+```html
+@pre
+print_r($myPrettyPrintVariable)
+@endpre
+```
+
+## Setting the Content Tags Blade Uses
+
+You know that blade uses `{{` and `}}` to specify content to be output, but this conflicts with Mustache or some other library you're using.
+If you want to use other tags, you can use `setContentTags` method. Let's say you want to use `[%` and `%]` for your tags.
+
+```php
+use Bono\App;
+
+$app = App::getInstance();
+
+$app->view->setContentTags('[%', '%]');
+```
+
+Then your template can contain code like.
+
+```html
+The value of $variable is [% $variable %].
+```
+
+You can also pass a third argument as `true` to indicate you're setting the tags to escape content.
+
+```php
+use Bono\App;
+
+$app = App::getInstance();
+
+$app->view->setContentTags('[%', '%]', true);
+```
+
+Then instad of using `{{{` and `}}}` you can use `[-%` and `%-]`.
+
+```html
+The HTML tags inside this value would be escaped [%- $variable -%].
+```
+
+> **Note:** You must call `setContentTags` method before using view. The best options is: make a `Provider` that preparing all of your Blade customization.
