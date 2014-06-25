@@ -1,9 +1,9 @@
-#BonoBlade
+# BonoBlade
 Laravel Blade Template Engine for Bono PHP Framework
 
 > **Note:** BonoBlade also use Blade templating for `partial` view
 
-##Install
+## Install
 Add this line to your `composer.json` file
 
 ```
@@ -12,7 +12,7 @@ Add this line to your `composer.json` file
 },
 ```
 
-##How to use
+## How to use
 Add these lines to your configuration file
 ```php
 'bono.providers' => array(
@@ -35,10 +35,11 @@ Add these lines to your configuration file
 'bono.partial.view' => '\\KrisanAlfa\\Blade\\BonoBlade',
 ```
 
-You may use any other theme based on `BladeTheme`, such as [blade foundation](https://github.com/krisanalfa/blade-foundation).
+> **Note:** You may use any other theme based on `BladeTheme`, such as [blade foundation](https://github.com/krisanalfa/blade-foundation).
 Or you can create your own theme.
 
-To render your
+## Basic usage
+
 ```php
 use Bono\App;
 
@@ -49,7 +50,7 @@ $app->get('/', function () use ($app) {
 });
 ```
 
-##Le' Layout
+## Layout example
 
 ```html
 <!-- myLayout.blade.php -->
@@ -68,7 +69,7 @@ $app->get('/', function () use ($app) {
 </html>
 ```
 
-##Le' Template
+## Template example
 
 ```html
 <!-- myTemplate.blade.php -->
@@ -81,7 +82,7 @@ New Title
 @endsection
 ```
 
-##Renderring Template
+## Renderring yemplate
 
 Simply, you can render your template by call `render` function in `\Bono\App` instance.
 ```php
@@ -90,12 +91,14 @@ use Bono\App;
 $app = App::getInstance();
 
 $app->get('/', function () use ($app) {
-    $app->view->setLayout('myLayout'); // be sure you're not adding '.blade.php' or your template will not found
+    $app->view->setLayout('myLayout');
     $app->render('myTemplate', array('name' => 'Krisan Alfa Timur'));
 });
 ```
 
-##Le' Result
+> **Note:** Be sure you're not adding `.blade.php` or your template will not found
+
+## Result
 
 ```html
 <!doctype html>
@@ -113,7 +116,7 @@ $app->get('/', function () use ($app) {
 </html>
 ```
 
-##Renderring a Page Without Layout
+## Renderring a page without layout
 
 ```php
 use Bono\App;
@@ -162,7 +165,11 @@ Note that views which `extend` a Blade layout simply override sections from the 
 
 Sometimes, such as when you are not sure if a section has been defined, you may wish to pass a default value to the `@yield` directive. You may pass the default value as the second argument:
 
-## Including Sub-Views
+```html
+@yield('content', '<p>Default</p>')
+```
+
+## Including sub-views
 
 ```html
 @include('view.name')
@@ -174,7 +181,7 @@ You may also pass an array of data to the included view:
 @include('view.name', array('some'=>'data'))
 ```
 
-## Overwriting Sections
+## Overwriting sections
 
 By default, sections are appended to any previous content that exists in the section. To overwrite a section entirely, you may use the `overwrite` statement:
 
@@ -217,7 +224,7 @@ two
 - `@show` - Yielding the Current Section in a Blade Template.
 - `@append` - Stopping Injecting Content into a Section and Appending It.
 
-## Extends Template To Be Reuseable
+## Extends template to be reuseable
 
 ```html
 <!-- listTemplate -->
@@ -262,9 +269,9 @@ My shiny footer
 
 Based on this case, your `body` section will be overriden by `lorem ipsum` and `bluish content`.
 
-## Other Blade Control Structures
+## Other blade control structures
 
-#### Echoing Data
+#### Echoing data
 
 ```html
 Hello, {{{ $name }}}.
@@ -272,7 +279,7 @@ Hello, {{{ $name }}}.
 The current UNIX timestamp is {{{ time() }}}.
 ```
 
-#### Echoing Data After Checking For Existence
+#### Echoing data after checking for existence
 
 Sometimes you may wish to echo a variable, but you aren't sure if the variable has been set. Basically, you want to do this:
 
@@ -286,7 +293,7 @@ However, instead of writing a ternary statement, Blade allows you to use the fol
 {{{ $name or 'Default' }}}
 ```
 
-#### Displaying Raw Text With Curly Braces
+#### Displaying raw text with curly braces
 
 If you need to display a string that is wrapped in curly braces, you may escape the Blade behavior by prefixing your text with an `@` symbol:
 
@@ -308,7 +315,7 @@ Hello, {{ $name }}.
 
 > **Note:** Be very careful when echoing content that is supplied by users of your application. Always use the triple curly brace syntax to escape any HTML entities in the content.
 
-#### If Statements
+#### If statements
 
 ```php
 @if (count($records) === 1)
@@ -323,6 +330,8 @@ Hello, {{ $name }}.
     You are not signed in.
 @endunless
 ```
+
+> **Note:** Method `@unless` is used when you want to write `@if(! functionReturnBool())`
 
 #### Loops
 
@@ -340,37 +349,13 @@ Hello, {{ $name }}.
 @endwhile
 ```
 
-#### Including Sub-Views
-
-```php
-@include('view.name')
-```
-
-You may also pass an array of data to the included view:
-
-```php
-@include('view.name', array('some'=>'data'))
-```
-
-#### Overwriting Sections
-
-By default, sections are appended to any previous content that exists in the section. To overwrite a section entirely, you may use the `overwrite` statement:
-
-```php
-@extends('list.item.container')
-
-@section('list.item.content')
-    <p>This is an item of type {{ $item->type }}</p>
-@overwrite
-```
-
 #### Comments
 
 ```php
 {{-- This comment will not be in the rendered HTML --}}
 ```
 
-##Extending Blade
+##Extending blade
 
 ```php
 use Bono\App;
@@ -414,7 +399,7 @@ print_r($myPrettyPrintVariable)
 @endpre
 ```
 
-## Setting the Content Tags Blade Uses
+## Setting the content tags blade uses
 
 You know that blade uses `{{` and `}}` to specify content to be output, but this conflicts with Mustache or some other library you're using.
 If you want to use other tags, you can use `setContentTags` method. Let's say you want to use `[%` and `%]` for your tags.
@@ -433,7 +418,7 @@ Then your template can contain code like.
 The value of $variable is [% $variable %].
 ```
 
-You can also pass a third argument as `true` to indicate you're setting the tags to escape content.
+You can also pass a third argument as `true` to indicate you're setting the tags to **escape** content.
 
 ```php
 use Bono\App;
