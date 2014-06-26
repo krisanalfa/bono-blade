@@ -3,7 +3,7 @@ Laravel Blade Template Engine for Bono PHP Framework
 
 > **Note:** BonoBlade also use Blade templating for `partial` view
 
-## Install
+## Installation
 Add this line to your `composer.json` file
 
 ```
@@ -12,8 +12,9 @@ Add this line to your `composer.json` file
 },
 ```
 
-## How to use
+## Configuration
 Add these lines to your configuration file
+
 ```php
 'bono.providers' => array(
     '\\KrisanAlfa\\Blade\\Provider\\BladeProvider'
@@ -39,7 +40,6 @@ Add these lines to your configuration file
 Or you can create your own theme.
 
 ## Basic usage
-
 ```php
 use Bono\App;
 
@@ -82,7 +82,7 @@ New Title
 @endsection
 ```
 
-## Renderring yemplate
+## Rendering template
 
 Simply, you can render your template by call `render` function in `\Bono\App` instance.
 ```php
@@ -116,7 +116,7 @@ $app->get('/', function () use ($app) {
 </html>
 ```
 
-## Renderring a page without layout
+## Rendering a page without layout
 
 ```php
 use Bono\App;
@@ -219,7 +219,7 @@ Then the following is output.
 two
 ```
 
-- `@overwrite` - End a section.
+- `@overwrite` - End a Section and Overwrite it.
 - `@stop` - Stopping Injecting Content Into a Section.
 - `@show` - Yielding the Current Section in a Blade Template.
 - `@append` - Stopping Injecting Content into a Section and Appending It.
@@ -271,7 +271,7 @@ Based on this case, your `body` section will be overriden by `lorem ipsum` and `
 
 ## Other blade control structures
 
-#### Echoing data
+### Echoing data
 
 ```html
 Hello, {{{ $name }}}.
@@ -279,7 +279,7 @@ Hello, {{{ $name }}}.
 The current UNIX timestamp is {{{ time() }}}.
 ```
 
-#### Echoing data after checking for existence
+### Echoing data after checking for existence
 
 Sometimes you may wish to echo a variable, but you aren't sure if the variable has been set. Basically, you want to do this:
 
@@ -293,7 +293,7 @@ However, instead of writing a ternary statement, Blade allows you to use the fol
 {{{ $name or 'Default' }}}
 ```
 
-#### Displaying raw text with curly braces
+### Displaying raw text with curly braces
 
 If you need to display a string that is wrapped in curly braces, you may escape the Blade behavior by prefixing your text with an `@` symbol:
 
@@ -315,7 +315,7 @@ Hello, {{ $name }}.
 
 > **Note:** Be very careful when echoing content that is supplied by users of your application. Always use the triple curly brace syntax to escape any HTML entities in the content.
 
-#### If statements
+### If statements
 
 ```php
 @if (count($records) === 1)
@@ -333,7 +333,7 @@ Hello, {{ $name }}.
 
 > **Note:** Method `@unless` is used when you want to write `@if(! functionReturnBool())`
 
-#### Loops
+### Loops
 
 ```php
 @for ($i = 0; $i < 10; $i++)
@@ -349,7 +349,7 @@ Hello, {{ $name }}.
 @endwhile
 ```
 
-#### Comments
+### Comments
 
 ```php
 {{-- This comment will not be in the rendered HTML --}}
