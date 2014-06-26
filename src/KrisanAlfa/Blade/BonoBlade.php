@@ -342,9 +342,9 @@ class BonoBlade extends View
      *
      * @return void
      */
-    public function display($template)
+    public function display($template, $data = array())
     {
-        echo $this->fetch($template);
+        echo $this->fetch($template, $data);
     }
 
     /**
@@ -366,17 +366,31 @@ class BonoBlade extends View
      *
      * @return string
      */
-    protected function render($template)
+    protected function render($template, $data = array())
     {
-        $data     = $this->all();
+        $data     = array_merge_recursive($this->all(), $data);
         $template = $this->resolve($template);
 
-        if ($template and $this->layout) {
+        if (! $template) {
+            return;
+        }
+
+        if (! $this->layout) {
+            $view = $this->make($template);
+
             try {
-                return $this->layout->nest('content', $template, $data)->render();
+                return $view->render();
             } catch (ErrorException $e) {
                 App::getInstance()->error($e);
             }
+
+            return;
+        }
+
+        try {
+            return $this->layout->nest('content', $template, $data)->render();
+        } catch (ErrorException $e) {
+            App::getInstance()->error($e);
         }
     }
 
