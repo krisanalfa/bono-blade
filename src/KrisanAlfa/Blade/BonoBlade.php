@@ -329,7 +329,10 @@ class BonoBlade extends View
     {
         $app          = App::getInstance();
         $layout       = $app->theme->resolve($layout);
-        $this->layout = $this->make($layout, $data);
+
+        if ($layout) {
+            $this->layout = $this->make($layout, $data);
+        }
     }
 
     /**
@@ -368,7 +371,7 @@ class BonoBlade extends View
         $data     = $this->all();
         $template = $this->resolve($template);
 
-        if ($template) {
+        if ($template and $this->layout) {
             try {
                 return $this->layout->nest('content', $template, $data)->render();
             } catch (ErrorException $e) {
