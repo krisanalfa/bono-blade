@@ -312,12 +312,7 @@ class BonoBlade extends View
      */
     public function setLayout($layout, array $data = array())
     {
-        $app          = $this->app;
-        $layout       = $app->theme->resolve($layout);
-
-        if ($layout) {
-            $this->layout = $this->make($layout, $data);
-        }
+        $this->layout = $this->make($this->resolve($layout), $data);
     }
 
     /**
@@ -384,6 +379,7 @@ class BonoBlade extends View
     * @param string $path The relative template path
     *
     * @return string
+    * @throws InvalidArgumentException If we cannot find view
     */
     public function resolve($path)
     {
