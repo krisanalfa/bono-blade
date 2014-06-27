@@ -12,6 +12,7 @@ use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
 use Exception;
+use InvalidArgumentException;
 use Slim\View;
 use Closure;
 
@@ -46,7 +47,7 @@ class BonoBlade extends View
      *
      * @var Illuminate\Container\Container
      */
-    protected $container;
+    public $container;
 
     /**
      * Blade View instance
@@ -72,21 +73,25 @@ class BonoBlade extends View
     *
     * @return KrisanAlfa\Blade\BonoBlade
     */
-    public function __construct($viewPaths = array(), $cachePath = '', $layoutName = null)
+    public function __construct(array $viewPaths, $cachePath, $layoutName)
     {
         parent::__construct();
 
         $this->app       = App::getInstance();
 
-        $config          = $this->app->config('bono.blade');
-
-        $this->viewPaths = (array) @$config['templates'] ?: (array) $viewPaths;
-
-        $this->cachePath = @$config['cache'] ?: $cachePath;
-
         $this->container = new Container;
 
-        $this->resolvePath();
+        $viewPaths       = $this->viewPaths = $this->resolvePath($viewPaths);
+
+        $this->container->bindShared('view.paths', function() use ($viewPaths) {
+            return $viewPaths;
+        });
+
+        $this->cachePath = $cachePath;
+
+        $this->container->bindShared('cache.path', function() use ($cachePath) {
+            return $cachePath;
+        });
 
         $this->registerFilesystem();
 
@@ -105,42 +110,23 @@ class BonoBlade extends View
     }
 
     /**
-     * Get protected attributes of cachePath
-     *
-     * @return string
-     */
-    public function getCachePath()
-    {
-        return $this->cachePath;
-    }
-
-    /**
-     * Get protected attributes of viewPaths
-     *
-     * @return array
-     */
-    public function getViewPaths()
-    {
-        return $this->viewPaths;
-    }
-
-    /**
      * Build an array for templates path directory
      *
      * @return void
      */
-    protected function resolvePath($bonoTemplatePathName = 'templates')
+    protected function resolvePath(array $originalPaths)
     {
-        $paths = array_merge_recursive(App::getInstance()->theme->getBaseDirectory(), $this->viewPaths);
-        $paths = $this->arrayFlatten($paths);
+        $paths = array();
 
-        foreach ($paths as $key => $path) {
-            if (count(explode($bonoTemplatePathName, $path)) == 1) {
-                $paths[$key] = $path . DIRECTORY_SEPARATOR . $bonoTemplatePathName;
+        foreach ($originalPaths as $key => $path) {
+            if (count(explode('templates', $path)) == 1) {
+                $path = $path . DIRECTORY_SEPARATOR . 'templates';
             }
+
+            $paths[$key] = $path;
         }
 
-        $this->viewPaths = $paths;
+        return $paths;
     }
 
     /**
@@ -165,24 +151,6 @@ class BonoBlade extends View
         $this->container->bindShared('events', function () {
             return new Dispatcher;
         });
-    }
-
-    /**
-     * A helper to flatten array
-     *
-     * @param array $array The array you want to flattened
-     *
-     * @return array The flattened array
-     */
-    protected function arrayFlatten($array)
-    {
-        $flattenedArray = array();
-
-        array_walk_recursive($array, function ($x) use (&$flattenedArray) {
-            $flattenedArray[] = $x;
-        });
-
-        return $flattenedArray;
     }
 
     /**
@@ -234,9 +202,7 @@ class BonoBlade extends View
         // this case will be the Blade compiler, so we'll first create the compiler
         // instance to pass into the engine so it can compile the views properly.
         $this->container->bindShared('blade.compiler', function ($container) use ($mySelf) {
-            $cachePath = $mySelf->getCachePath();
-
-            return new BladeCompiler($container['files'], $cachePath);
+            return new BladeCompiler($container['files'], $container['cache.path']);
         });
 
         // Register the blade view file finder to resolve to template
@@ -252,10 +218,10 @@ class BonoBlade extends View
      */
     protected function registerViewFinder()
     {
-        $mySelf = $this;
+        $container = $this->container;
 
-        $this->container->bindShared('view.finder', function ($app) use ($mySelf) {
-            return new FileViewFinder($app['files'], $mySelf->getViewPaths());
+        $this->container->bindShared('view.finder', function ($app) use ($container) {
+            return new FileViewFinder($app['files'], $container['view.paths']);
         });
     }
 
@@ -280,6 +246,24 @@ class BonoBlade extends View
         $env->setContainer($this->container);
 
         return $env;
+    }
+
+    /**
+     * A helper to flatten array
+     *
+     * @param array $array The array you want to flattened
+     *
+     * @return array The flattened array
+     */
+    protected function arrayFlatten($array)
+    {
+        $flattenedArray = array();
+
+        array_walk_recursive($array, function ($x) use (&$flattenedArray) {
+            $flattenedArray[] = $x;
+        });
+
+        return $flattenedArray;
     }
 
     /**
@@ -328,7 +312,7 @@ class BonoBlade extends View
      */
     public function setLayout($layout, array $data = array())
     {
-        $app          = App::getInstance();
+        $app          = $this->app;
         $layout       = $app->theme->resolve($layout);
 
         if ($layout) {
@@ -363,7 +347,7 @@ class BonoBlade extends View
             try {
                 return $view->render();
             } catch (Exception $e) {
-                App::getInstance()->error($e);
+                $this->app->error($e);
             }
         }
     }
@@ -378,7 +362,7 @@ class BonoBlade extends View
     protected function render($template, $data = array())
     {
         $data     = array_merge_recursive($this->all(), $data);
-        $template = $this->resolve($template);
+        $template = $this->resolve(str_replace('/', '.', $template));
         $view     = null;
 
         if (! $template) {
@@ -403,68 +387,26 @@ class BonoBlade extends View
     */
     public function resolve($path)
     {
-        $explodedPath = explode(DIRECTORY_SEPARATOR, $path);
+        $finder = $this->container['view.finder'];
 
-        // If it's like /resource/:id/:method
-        if (count($explodedPath) > 1) {
-            // Template priority:
-            // 1) /[templatedir]/[:resource]/[:method]
-            // 2) /[templatedir]/shared/[:method]
-            foreach ($this->viewPaths as $viewPath) {
+        try {
+            $finder->find($path);
+        } catch (InvalidArgumentException $e) {
+            $explodedPath = explode('.', $path);
 
-                // Get the specific resource template
-                $template = $this->resourceTemplateIsExist($viewPath, $explodedPath);
-                if (! is_null($template)) return $template;
+            if (count($explodedPath) > 1) {
+                $explodedPath[0] = 'shared';
 
-                // Get shared template
-                $template = $this->sharedTemplateIsExist($viewPath, $explodedPath);
-                if (! is_null($template)) return $template;
+                try {
+                    $finder->find(implode('.', $explodedPath));
+                    $path = implode('.', $explodedPath);
+                } catch (InvalidArgumentException $e) {
+                    $this->app->error($e);
+                }
             }
         }
 
         return $path;
-    }
-
-    /**
-    * This method will find out if the resource template is exist
-    * For example the URL /resource/:id/:method
-    * This method will try to resolve for /templatedir/:resource/:method
-    *
-    * @param string $viewPath     The view / template path we want to check
-    * @param array  $explodedPath The exploded template path
-    *
-    * @return mixed If the resource template is exist, this method will return the template path,
-    *               but if not, this method will return null
-    */
-    protected function resourceTemplateIsExist($viewPath, $explodedPath)
-    {
-        $glued = implode(DIRECTORY_SEPARATOR, $explodedPath);
-        $file  = realpath($viewPath . DIRECTORY_SEPARATOR . $glued . '.blade.php');
-
-        if (is_readable($file)) {
-            return implode('.', $explodedPath);
-        }
-    }
-
-    /**
-    * This method will find out if the shared template is exist
-    * For example: The URL /resource/:id/:action
-    * This method will try to resolve for /templatedir/shared/:action
-    *
-    * @param string $viewPath     The view / template path
-    * @param array  $explodedPath The exploded template path
-    *
-    * @return mixed If the shared template is exist, this method will return the template path,
-    *               but if not, this method will return null
-    */
-    protected function sharedTemplateIsExist($viewPath, $explodedPath)
-    {
-        $tail = end($explodedPath);
-        $file = realpath($viewPath . DIRECTORY_SEPARATOR . 'shared' . DIRECTORY_SEPARATOR . $tail . '.blade.php');
-
-        if (is_readable($file)) {
-            return 'shared.' . $tail;
-        }
     }
 
     /**
@@ -482,7 +424,7 @@ class BonoBlade extends View
         try {
             return call_user_func_array(array($view, $method), $args);
         } catch (RuntimeException $e) {
-            App::getInstance()->error($e);
+            $this->app->error($e);
         }
     }
 }

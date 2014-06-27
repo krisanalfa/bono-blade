@@ -57,7 +57,10 @@ class BladeProvider extends Provider
      */
     protected function setViewPaths()
     {
-        return $this->defaultConfig('templates.path', (array) $this->app->config('app.templates.path'));
+        $ours = $this->defaultConfig('templates.path', (array) $this->app->config('app.templates.path'));
+        $theme = $this->arrayFlatten($this->app->theme->getBaseDirectory());
+
+        return array_merge_recursive($ours, $theme);
     }
 
     /**
@@ -86,6 +89,12 @@ class BladeProvider extends Provider
         return $this->defaultConfig('layout', 'layout');
     }
 
+    /**
+     * Get default option
+     * @param  string $key     The key in our options
+     * @param  mixed  $default Default if key didn't found
+     * @return mixed
+     */
     protected function defaultConfig($key, $default)
     {
         if (isset($this->options[$key])) {
@@ -93,5 +102,23 @@ class BladeProvider extends Provider
         } else {
             return $default;
         }
+    }
+
+    /**
+     * A helper to flatten array
+     *
+     * @param array $array The array you want to flattened
+     *
+     * @return array The flattened array
+     */
+    protected function arrayFlatten($array)
+    {
+        $flattenedArray = array();
+
+        array_walk_recursive($array, function ($x) use (&$flattenedArray) {
+            $flattenedArray[] = $x;
+        });
+
+        return $flattenedArray;
     }
 }
