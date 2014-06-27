@@ -23,24 +23,15 @@ class BladeProvider extends Provider
     protected $app = null;
 
     /**
-     * Configuration
-     */
-    protected $config = array();
-    /**
      * Initialize the provider
      *
      * @return void
      */
     public function initialize()
     {
-        $app    = $this->app    = App::getInstance();
-        $config = $this->config = $app->config('bono.blade');
+        $app = $this->app = App::getInstance();
 
-        $this->setViewPaths();
-        $this->setCachePath();
-        $this->setLayout();
-
-        $app->config('view', new BonoBlade($this->viewPaths, $this->cachePath, $this->layout));
+        $app->config('view', new BonoBlade($this->setViewPaths(), $this->setCachePath(), $this->setLayout()));
     }
 
     /**
@@ -52,13 +43,10 @@ class BladeProvider extends Provider
      */
     protected function makeCachePath()
     {
-        // If cache path is not exist and directory is writable, create new cache path
-        if (! is_dir($this->cachePath)) {
-            if (is_writable(dirname($this->cachePath))) {
-                mkdir($this->cachePath, 0755);
-            } else {
-                $this->app->error(new Exception("Cannot create folder in " . dirname($this->cachePath), 1));
-            }
+        try {
+            mkdir($this->cachePath, 0755);
+        } catch (Exception $e) {
+            $this->app->error($e);
         }
     }
 
@@ -69,13 +57,7 @@ class BladeProvider extends Provider
      */
     protected function setViewPaths()
     {
-        $this->viewPaths = null;
-
-        if (isset($this->config['templates.path'])) {
-            $this->viewPaths = $this->config['templates.path'];
-        } else {
-            $this->viewPaths = $this->app->config('app.templates.path');
-        }
+        return $this->defaultConfig('templates.path', (array) $this->app->config('app.templates.path'));
     }
 
     /**
@@ -85,15 +67,13 @@ class BladeProvider extends Provider
      */
     protected function setCachePath()
     {
-        $this->cachePath = null;
+        $cachePath = $this->defaultConfig('cache.path', '../cache');
 
-        if (isset($this->config['cache.path'])) {
-            $this->cachePath = $config['cache.path'];
-        } else {
-            $this->cachePath = '../cache';
+        if (! is_dir($cachePath)) {
+            $this->makeCachePath();
         }
 
-        $this->makeCachePath();
+        return $cachePath;
     }
 
     /**
@@ -103,12 +83,15 @@ class BladeProvider extends Provider
      */
     protected function setLayout()
     {
-        $this->layout = null;
+        return $this->defaultConfig('layout', 'layout');
+    }
 
-        if (isset($this->config['layout'])) {
-            $this->layout = $this->config['layout'];
+    protected function defaultConfig($key, $default)
+    {
+        if (isset($this->options[$key])) {
+            return $this->options[$key];
         } else {
-            $this->layout = 'layout';
+            return $default;
         }
     }
 }

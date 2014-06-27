@@ -20,13 +20,6 @@ Add these lines to your configuration file
     '\\KrisanAlfa\\Blade\\Provider\\BladeProvider'
 ),
 
-// This section is not required, but if you want customize the config, here's a base config
-'bono.blade' => array(
-    'templates.path' => array('pathToTemplatesPath'), // Default is array('../templates')
-    'cache.path' => 'pathToCachePath',                // Default is '../cache'
-    'layout' => 'customLayoutName',                   // Default is 'layout'
-),
-
 // Bono Themeing
 'bono.theme' => array(
     'class' => '\\KrisanAlfa\\Theme\\BladeTheme', // You can use another theme that extends from bono
@@ -34,6 +27,19 @@ Add these lines to your configuration file
 
 // Bono Partial (segment of template)
 'bono.partial.view' => '\\KrisanAlfa\\Blade\\BonoBlade',
+```
+
+If you want to change layout file name, templates path, or cache path, you can add options in your provider like this
+
+
+```php
+'bono.providers' => array(
+    '\\KrisanAlfa\\Blade\\Provider\\BladeProvider' => array(
+        'templates.path' => array('pathToTemplatesPath'), // Default is array('../templates')
+        'cache.path' => 'pathToCachePath',                // Default is '../cache'
+        'layout' => 'customLayoutName',                   // Default is 'layout'
+    ),
+),
 ```
 
 > **Note:** You may use any other theme based on `BladeTheme`, such as [blade foundation](https://github.com/krisanalfa/blade-foundation).
@@ -124,8 +130,8 @@ use Bono\App;
 $app = App::getInstance();
 
 $app->get('/', function () use ($app) {
-    // This method is same with $app->view->partial($template, $data)
-    $app->view->make('myTemplateWithoutLayout', array('name' => 'Krisan Alfa Timur'));
+    // This method is same with $app->theme->partial($templateName, $data)
+    $app->view->display('myTemplateWithoutLayout', array('name' => 'Krisan Alfa Timur'));
 });
 ```
 
