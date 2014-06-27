@@ -2,6 +2,7 @@
 
 use Bono\App;
 use Illuminate\Container\Container;
+use Illuminate\View\View as BladeView;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\View\Compilers\BladeCompiler;
@@ -10,7 +11,7 @@ use Illuminate\View\Engines\CompilerEngine;
 use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
-use ErrorException;
+use Exception;
 use Slim\View;
 use Closure;
 
@@ -57,7 +58,7 @@ class BonoBlade extends View
     /**
      * The main layout
      *
-     * @var string
+     * @var Illuminate\View\View
      */
     protected $layout = '';
 
@@ -352,11 +353,19 @@ class BonoBlade extends View
      *
      * @var string $template The template pathname, relative to the template base directory
      *
-     * @return string The rendered template
+     * @return Illuminate\View\View
      */
-    public function fetch($template)
+    public function fetch($template, $data = array())
     {
-        return $this->render($template);
+        $view = $this->render($template, $data);
+
+        if ($view instanceof BladeView) {
+            try {
+                return $view->render();
+            } catch (Exception $e) {
+                App::getInstance()->error($e);
+            }
+        }
     }
 
     /**
@@ -364,34 +373,25 @@ class BonoBlade extends View
      *
      * @param string $template The path to the Blade template, relative to the Blade templates directory.
      *
-     * @return string
+     * @return Illuminate\View\View
      */
     protected function render($template, $data = array())
     {
         $data     = array_merge_recursive($this->all(), $data);
         $template = $this->resolve($template);
+        $view     = null;
 
         if (! $template) {
             return;
         }
 
         if (! $this->layout) {
-            $view = $this->make($template);
-
-            try {
-                return $view->render();
-            } catch (ErrorException $e) {
-                App::getInstance()->error($e);
-            }
-
-            return;
+            $view = $this->make($template, $data);
+        } else {
+            $view = $this->layout->nest('content', $template, $data);
         }
 
-        try {
-            return $this->layout->nest('content', $template, $data)->render();
-        } catch (ErrorException $e) {
-            App::getInstance()->error($e);
-        }
+        return $view;
     }
 
     /**
