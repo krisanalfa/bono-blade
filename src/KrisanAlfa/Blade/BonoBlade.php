@@ -1,6 +1,10 @@
 <?php namespace KrisanAlfa\Blade;
 
 use Bono\App;
+use Closure;
+use Exception;
+use ErrorException;
+use InvalidArgumentException;
 use Illuminate\Container\Container;
 use Illuminate\View\View as BladeView;
 use Illuminate\Events\Dispatcher;
@@ -11,10 +15,7 @@ use Illuminate\View\Engines\CompilerEngine;
 use Illuminate\View\Engines\EngineResolver;
 use Illuminate\View\Environment;
 use Illuminate\View\FileViewFinder;
-use Exception;
-use InvalidArgumentException;
 use Slim\View;
-use Closure;
 
 /**
  * A Blade Template Engine for Bono PHP Framework
@@ -79,17 +80,17 @@ class BonoBlade extends View
 
         $this->app       = App::getInstance();
 
-        $this->container = new Container;
+        $this->container = new Container();
 
         $viewPaths       = $this->viewPaths = $this->resolvePath($viewPaths);
 
-        $this->container->bindShared('view.paths', function() use ($viewPaths) {
+        $this->container->bindShared('view.paths', function () use ($viewPaths) {
             return $viewPaths;
         });
 
         $this->cachePath = $cachePath;
 
-        $this->container->bindShared('cache.path', function() use ($cachePath) {
+        $this->container->bindShared('cache.path', function () use ($cachePath) {
             return $cachePath;
         });
 
@@ -137,7 +138,7 @@ class BonoBlade extends View
     protected function registerFilesystem()
     {
         $this->container->bindShared('files', function () {
-            return new Filesystem;
+            return new Filesystem();
         });
     }
 
@@ -149,7 +150,7 @@ class BonoBlade extends View
     protected function registerEvents()
     {
         $this->container->bindShared('events', function () {
-            return new Dispatcher;
+            return new Dispatcher();
         });
     }
 
@@ -163,7 +164,7 @@ class BonoBlade extends View
         $mySelf = $this;
 
         $this->container->bindShared('view.engine.resolver', function ($app) use ($mySelf) {
-            $resolver = new EngineResolver;
+            $resolver = new EngineResolver();
 
             $mySelf->registerPhpEngine($resolver);
             $mySelf->registerBladeEngine($resolver);
@@ -182,7 +183,7 @@ class BonoBlade extends View
     protected function registerPhpEngine(EngineResolver $resolver)
     {
         $resolver->register('php', function () {
-            return new PhpEngine;
+            return new PhpEngine();
         });
     }
 
@@ -249,24 +250,6 @@ class BonoBlade extends View
     }
 
     /**
-     * A helper to flatten array
-     *
-     * @param array $array The array you want to flattened
-     *
-     * @return array The flattened array
-     */
-    protected function arrayFlatten($array)
-    {
-        $flattenedArray = array();
-
-        array_walk_recursive($array, function ($x) use (&$flattenedArray) {
-            $flattenedArray[] = $x;
-        });
-
-        return $flattenedArray;
-    }
-
-    /**
      * Extend the compiler
      *
      * @param Closure $function callback to the Blade::extend()
@@ -281,9 +264,9 @@ class BonoBlade extends View
     /**
      * Sets the content tags used for the compiler.
      *
-     * @param  string  $openTag
-     * @param  string  $closeTag
-     * @param  bool    $escaped
+     * @param  string $openTag
+     * @param  string $closeTag
+     * @param  bool   $escaped
      * @return void
      */
     public function setContentTags($openTag, $closeTag, $escaped = false)
@@ -343,6 +326,8 @@ class BonoBlade extends View
                 return $view->render();
             } catch (Exception $e) {
                 $this->app->error($e);
+            } catch (ErrorException $e) {
+                $this->app->error($e);
             }
         }
     }
@@ -356,9 +341,10 @@ class BonoBlade extends View
      */
     protected function render($template, $data = array())
     {
-        $data     = array_merge_recursive($this->all(), $data);
-        $template = $this->resolve(str_replace('/', '.', $template));
-        $view     = null;
+        $data        = array_merge_recursive($this->all(), $data);
+        $template    = $this->resolve(str_replace('/', '.', $template));
+        $view        = null;
+        $data['app'] = $this->app;
 
         if (! $template) {
             return;
@@ -422,5 +408,21 @@ class BonoBlade extends View
         } catch (RuntimeException $e) {
             $this->app->error($e);
         }
+    }
+
+    /**
+     * Override all method on Slim\View
+     *
+     * @return array
+     */
+    public function all()
+    {
+        $data = parent::all();
+
+        if (f('controller')) {
+            $data = array_merge($data, f('controller')->getData());
+        }
+
+        return $data;
     }
 }
