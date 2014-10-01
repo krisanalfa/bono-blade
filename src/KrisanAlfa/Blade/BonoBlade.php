@@ -2,11 +2,8 @@
 
 use Bono\App;
 use Closure;
-use Exception;
-use ErrorException;
 use InvalidArgumentException;
 use Illuminate\Container\Container;
-use Illuminate\View\View as BladeView;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\View\Compilers\BladeCompiler;
@@ -295,6 +292,12 @@ class BonoBlade extends View
      */
     public function setLayout($layout, array $data = array())
     {
+        if (is_null($layout)) {
+            $this->layout = null;
+
+            return;
+        }
+
         $this->layout = $this->make($this->resolve($layout), $data);
     }
 
@@ -321,15 +324,7 @@ class BonoBlade extends View
     {
         $view = $this->render($template, $data);
 
-        if ($view instanceof BladeView) {
-            try {
-                return $view->render();
-            } catch (Exception $e) {
-                $this->app->error($e);
-            } catch (ErrorException $e) {
-                $this->app->error($e);
-            }
-        }
+        return $view->render();
     }
 
     /**
@@ -341,10 +336,10 @@ class BonoBlade extends View
      */
     protected function render($template, $data = array())
     {
-        $data        = array_merge_recursive($this->all(), $data);
-        $template    = $this->resolve(str_replace('/', '.', $template));
         $view        = null;
+        $data        = array_merge_recursive($this->all(), $data);
         $data['app'] = $this->app;
+        $template    = $this->resolve(str_replace('/', '.', $template));
 
         if (! $template) {
             return;
