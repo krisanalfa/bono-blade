@@ -121,10 +121,13 @@ class BonoBlade extends View
                 $path = $path . DIRECTORY_SEPARATOR . 'templates';
             }
 
-            $paths[$key] = $path;
+            if (realpath($path)) {
+                $paths[$key] = realpath($path);
+            }
+
         }
 
-        return $paths;
+        return array_unique($paths);
     }
 
     /**
