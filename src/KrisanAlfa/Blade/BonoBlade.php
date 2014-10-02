@@ -324,7 +324,7 @@ class BonoBlade extends View
     {
         $view = $this->render($template, $data);
 
-        return $view->render();
+        return ($view) ? $view->render() : '';
     }
 
     /**
