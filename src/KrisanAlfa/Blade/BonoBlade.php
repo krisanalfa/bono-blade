@@ -71,7 +71,7 @@ class BonoBlade extends View
     *
     * @return KrisanAlfa\Blade\BonoBlade
     */
-    public function __construct(array $viewPaths, $cachePath, $layoutName)
+    public function __construct(array $viewPaths, $cachePath, $layoutName = null)
     {
         parent::__construct();
 
