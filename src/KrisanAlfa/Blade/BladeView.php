@@ -22,23 +22,10 @@ use Slim\View;
  * @author    Krisan Alfa Timur <krisan47@gmail.com>
  * @copyright 2013 PT Sagara Xinix Solusitama
  * @license   https://raw.github.com/xinix-technology/bono/master/LICENSE MIT
- * @link      https://github.com/krisanalfa/bonoblade
+ * @link      https://github.com/krisanalfa/bono-blade
  */
-class BonoBlade extends View
+class BladeView extends View
 {
-    /**
-     * Array containg paths where to look for blade files
-     *
-     * @var array
-     */
-    protected $viewPaths = array();
-
-    /**
-     * Location where to store cached views
-     *
-     * @var string
-     */
-    protected $cachePath = '';
 
     /**
      * A slim container for Blade ecosystem
@@ -65,13 +52,11 @@ class BonoBlade extends View
     * Initalizer a.k.a the class constructor
     * Leave the third arguments empty if you won't use any layout
     *
-    * @param array  $viewPaths  The path where your template resides
-    * @param string $cachePath  The path where you want to store the view cache
-    * @param string $layoutName The main layout you want to use
+    * @param array  $options  Options for BladeView
     *
-    * @return KrisanAlfa\Blade\BonoBlade
+    * @return KrisanAlfa\Blade\BladeView
     */
-    public function __construct(array $viewPaths, $cachePath, $layoutName = null)
+    public function __construct(array $options)
     {
         parent::__construct();
 
@@ -79,13 +64,13 @@ class BonoBlade extends View
 
         $this->container = new Container();
 
-        $viewPaths       = $this->viewPaths = $this->resolvePath($viewPaths);
+        $viewPaths       = $this->resolvePath($options['viewPaths']);
 
         $this->container->bindShared('view.paths', function () use ($viewPaths) {
             return $viewPaths;
         });
 
-        $this->cachePath = $cachePath;
+        $cachePath = $options['cachePath'];
 
         $this->container->bindShared('cache.path', function () use ($cachePath) {
             return $cachePath;
@@ -100,9 +85,6 @@ class BonoBlade extends View
         $this->registerViewFinder();
 
         $this->instance = $this->registerEnvironment();
-
-        // Set the layout
-        $this->setLayout($layoutName);
 
         return $this;
     }
