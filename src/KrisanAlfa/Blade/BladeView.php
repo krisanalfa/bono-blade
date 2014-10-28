@@ -324,7 +324,8 @@ class BladeView extends View
         $view        = null;
         $data        = array_merge_recursive($this->all(), $data);
         $data['app'] = $this->app;
-        $template    = $this->resolve(str_replace('/', '.', $template));
+        $template    = $this->resolve($template);
+
 
         if (! $template) {
             return;
@@ -349,6 +350,8 @@ class BladeView extends View
     */
     public function resolve($path)
     {
+        $path = str_replace('/', '.', preg_replace('/\/:\w+/', '', $path));
+
         $finder = $this->container['view.finder'];
 
         try {
@@ -356,13 +359,14 @@ class BladeView extends View
         } catch (InvalidArgumentException $e) {
             $explodedPath = explode('.', $path);
 
+
             if ($explodedPath[0] === 'static') {
                 return null;
             }
 
             if (count($explodedPath) > 1) {
                 $explodedPath[0] = 'shared';
-
+                $explodedPath = array('shared', end($explodedPath));
                 try {
                     $finder->find(implode('.', $explodedPath));
                     $path = implode('.', $explodedPath);
@@ -399,14 +403,16 @@ class BladeView extends View
      *
      * @return array
      */
-    public function all()
-    {
-        $data = parent::all();
+    // public function all()
+    // {
+    //     $data = parent::all();
 
-        if (f('controller')) {
-            $data = array_merge($data, f('controller')->getData());
-        }
+    //     if (f('controller')) {
+    //         // var_dump($this->app->response->data(), $this->app->response->data());
+    //         // exit;
+    //         $data = array_merge($data, $this->app->response->data());
+    //     }
 
-        return $data;
-    }
+    //     return $data;
+    // }
 }
