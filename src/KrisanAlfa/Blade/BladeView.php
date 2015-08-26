@@ -10,7 +10,7 @@ use Illuminate\View\Compilers\BladeCompiler;
 use Illuminate\View\Engines\PhpEngine;
 use Illuminate\View\Engines\CompilerEngine;
 use Illuminate\View\Engines\EngineResolver;
-use Illuminate\View\Environment;
+use Illuminate\View\Factory;
 use Illuminate\View\FileViewFinder;
 use Slim\View;
 
@@ -66,13 +66,13 @@ class BladeView extends View
 
         $viewPaths       = $this->resolvePath($options['viewPaths']);
 
-        $this->container->bindShared('view.paths', function () use ($viewPaths) {
+        $this->container->singleton('view.paths', function () use ($viewPaths) {
             return $viewPaths;
         });
 
         $cachePath = $options['cachePath'];
 
-        $this->container->bindShared('cache.path', function () use ($cachePath) {
+        $this->container->singleton('cache.path', function () use ($cachePath) {
             return $cachePath;
         });
 
@@ -84,9 +84,9 @@ class BladeView extends View
 
         $this->registerViewFinder();
 
-        $this->instance = $this->registerEnvironment();
+        $this->registerFactory();
 
-        return $this;
+        $this->instance = $this->container->make('view');
     }
 
     /**
@@ -119,7 +119,7 @@ class BladeView extends View
     */
     protected function registerFilesystem()
     {
-        $this->container->bindShared('files', function () {
+        $this->container->singleton('files', function () {
             return new Filesystem();
         });
     }
@@ -131,7 +131,7 @@ class BladeView extends View
     */
     protected function registerEvents()
     {
-        $this->container->bindShared('events', function () {
+        $this->container->singleton('events', function () {
             return new Dispatcher();
         });
     }
@@ -143,13 +143,14 @@ class BladeView extends View
      */
     protected function registerEngineResolver()
     {
-        $mySelf = $this;
-
-        $this->container->bindShared('view.engine.resolver', function ($app) use ($mySelf) {
-            $resolver = new EngineResolver();
-
-            $mySelf->registerPhpEngine($resolver);
-            $mySelf->registerBladeEngine($resolver);
+        $this->container->singleton('view.engine.resolver', function () {
+            $resolver = new EngineResolver;
+            // Next we will register the various engines with the resolver so that the
+            // environment can resolve the engines it needs for various views based
+            // on the extension of view files. We call a method for each engines.
+            foreach (['php', 'blade'] as $engine) {
+                $this->{'register'.ucfirst($engine).'Engine'}($resolver);
+            }
 
             return $resolver;
         });
@@ -164,9 +165,7 @@ class BladeView extends View
      */
     protected function registerPhpEngine(EngineResolver $resolver)
     {
-        $resolver->register('php', function () {
-            return new PhpEngine();
-        });
+        $resolver->register('php', function () { return new PhpEngine; });
     }
 
     /**
@@ -178,17 +177,15 @@ class BladeView extends View
      */
     protected function registerBladeEngine(EngineResolver $resolver)
     {
-        $mySelf    = $this;
         $container = $this->container;
 
         // The Compiler engine requires an instance of the CompilerInterface, which in
         // this case will be the Blade compiler, so we'll first create the compiler
         // instance to pass into the engine so it can compile the views properly.
-        $this->container->bindShared('blade.compiler', function ($container) use ($mySelf) {
+        $container->singleton('blade.compiler', function ($container) {
             return new BladeCompiler($container['files'], $container['cache.path']);
         });
 
-        // Register the blade view file finder to resolve to template
         $resolver->register('blade', function () use ($container) {
             return new CompilerEngine($container['blade.compiler'], $container['files']);
         });
@@ -201,34 +198,34 @@ class BladeView extends View
      */
     protected function registerViewFinder()
     {
-        $container = $this->container;
-
-        $this->container->bindShared('view.finder', function ($app) use ($container) {
-            return new FileViewFinder($app['files'], $container['view.paths']);
+        $this->container->bind('view.finder', function ($container) {
+            return new FileViewFinder($container['files'], $container['view.paths']);
         });
     }
 
     /**
      * Register the view environment.
      *
-     * @return Illuminate\View\Environment
+     * @return Illuminate\View\Factory
      */
-    protected function registerEnvironment()
+    protected function registerFactory()
     {
-        // Next we need to grab the engine resolver instance that will be used by the
-        // environment. The resolver will be used by an environment to get each of
-        // the various engine implementations such as plain PHP or Blade engine.
-        $resolver = $this->container['view.engine.resolver'];
-        $finder   = $this->container['view.finder'];
-        $events   = $this->container['events'];
-        $env      = new Environment($resolver, $finder, $events);
+        $this->container->singleton('view', function ($container) {
+            // Next we need to grab the engine resolver instance that will be used by the
+            // environment. The resolver will be used by an environment to get each of
+            // the various engine implementations such as plain PHP or Blade engine.
+            $resolver = $container['view.engine.resolver'];
+            $finder = $container['view.finder'];
 
-        // We will also set the container instance on this view environment since the
-        // view composers may be classes registered in the container, which allows
-        // for great testable, flexible composers for the application developer.
-        $env->setContainer($this->container);
+            $env = new Factory($resolver, $finder, $container['events']);
+            // We will also set the container instance on this view environment since the
+            // view composers may be classes registered in the container, which allows
+            // for great testable, flexible composers for the application developer.
+            $env->setContainer($container);
+            $env->share('app', $container);
 
-        return $env;
+            return $env;
+        });
     }
 
     /**

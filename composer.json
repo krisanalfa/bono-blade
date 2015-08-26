@@ -7,7 +7,7 @@
         }
     },
     "require": {
-        "illuminate/view": "~4.1.23"
+        "illuminate/view": "5.1.*"
     },
     "license": "MIT",
     "authors": [
